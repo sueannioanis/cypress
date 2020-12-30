@@ -1,8 +1,8 @@
 require('../spec_helper')
 
+const mockedEnv = require('mocked-env')
 const path = require('path')
 const commitInfo = require('@cypress/commit-info')
-const tsnode = require('ts-node')
 const Fixtures = require('../support/helpers/fixtures')
 const api = require(`${root}lib/api`)
 const user = require(`${root}lib/user`)
@@ -315,54 +315,6 @@ This option will not have an effect in Some-other-name. Tests that rely on web s
         expect(config).ok
       })
     })
-
-    describe('out-of-the-box typescript setup', () => {
-      const tsProjPath = Fixtures.projectPath('ts-installed')
-      // Root path is used because resolve finds server typescript path when we use a project under `suppert/projects` folder.
-      const rootPath = path.join(__dirname, '../../../../..')
-      const projTsPath = path.join(tsProjPath, 'node_modules/typescript/index.js')
-
-      let cfg
-
-      beforeEach(() => {
-        return config.get(tsProjPath, {})
-        .then((c) => {
-          cfg = c
-        })
-      })
-
-      const setupProject = (typescript, projectRoot) => {
-        const proj = new Project(projectRoot)
-
-        sinon.stub(proj, 'watchSettingsAndStartWebsockets').resolves()
-        sinon.stub(proj, 'checkSupportFile').resolves()
-        sinon.stub(proj, 'scaffold').resolves()
-        sinon.stub(proj, 'getConfig').resolves({ ...cfg, typescript })
-
-        const register = sinon.stub(tsnode, 'register')
-
-        return { proj, register }
-      }
-
-      it('ts installed', () => {
-        const { proj, register } = setupProject('default', tsProjPath)
-
-        return proj.open().then(() => {
-          expect(register).to.be.calledWith({
-            transpileOnly: true,
-            compiler: projTsPath,
-          })
-        })
-      })
-
-      it('ts not installed', () => {
-        const { proj, register } = setupProject('default', rootPath)
-
-        return proj.open().then(() => {
-          expect(register).not.called
-        })
-      })
-    })
   })
 
   context('#close', () => {
@@ -462,6 +414,54 @@ This option will not have an effect in Some-other-name. Tests that rely on web s
 
       return this.project.scaffold(this.obj).then(() => {
         expect(scaffold.plugins).not.to.be.called
+      })
+    })
+
+    describe('forced', () => {
+      let resetEnv
+
+      beforeEach(function () {
+        this.obj.isTextTerminal = true
+        resetEnv = mockedEnv({
+          CYPRESS_INTERNAL_FORCE_SCAFFOLD: '1',
+        })
+      })
+
+      afterEach(() => {
+        resetEnv()
+      })
+
+      it('calls scaffold when forced by environment variable', function () {
+        return this.project.scaffold(this.obj).then(() => {
+          expect(scaffold.integration).to.be.calledWith(this.obj.integrationFolder)
+          expect(scaffold.fixture).to.be.calledWith(this.obj.fixturesFolder)
+          expect(scaffold.support).to.be.calledWith(this.obj.supportFolder)
+        })
+      })
+    })
+
+    describe('not forced', () => {
+      let resetEnv
+
+      beforeEach(function () {
+        this.obj.isTextTerminal = true
+
+        resetEnv = mockedEnv({
+          CYPRESS_INTERNAL_FORCE_SCAFFOLD: undefined,
+        })
+      })
+
+      afterEach(() => {
+        resetEnv()
+      })
+
+      it('does not scaffold integration folder', function () {
+        return this.project.scaffold(this.obj).then(() => {
+          expect(scaffold.integration).to.not.be.calledWith(this.obj.integrationFolder)
+          expect(scaffold.fixture).to.not.be.calledWith(this.obj.fixturesFolder)
+          // still scaffolds support folder due to old logic
+          expect(scaffold.support).to.be.calledWith(this.obj.supportFolder)
+        })
       })
     })
   })
@@ -612,7 +612,7 @@ This option will not have an effect in Some-other-name. Tests that rely on web s
 
       plugins.init.rejects(error)
 
-      return this.project.watchPluginsFile(this.config, {
+      this.project.watchPluginsFile(this.config, {
         onError (err) {
           expect(err).to.eql(error)
 

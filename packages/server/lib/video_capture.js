@@ -27,6 +27,33 @@ const deferredPromise = function () {
 }
 
 module.exports = {
+  generateFfmpegChaptersConfig (tests) {
+    if (!tests) {
+      return null
+    }
+
+    const configString = tests.map((test) => {
+      return test.attempts.map((attempt, i) => {
+        const { videoTimestamp, wallClockDuration } = attempt
+        let title = test.title ? test.title.join(' ') : ''
+
+        if (i > 0) {
+          title += `attempt ${i}`
+        }
+
+        return [
+          '[CHAPTER]',
+          'TIMEBASE=1/1000',
+          `START=${videoTimestamp - wallClockDuration}`,
+          `END=${videoTimestamp}`,
+          `title=${title}`,
+        ].join('\n')
+      }).join('\n')
+    }).join('\n')
+
+    return `;FFMETADATA1\n${configString}`
+  },
+
   getMsFromDuration (duration) {
     return utils.timemarkToSeconds(duration) * 1000
   },
@@ -51,6 +78,18 @@ module.exports = {
     })
   },
 
+  getChapters (fileName) {
+    return new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(fileName, ['-show_chapters'], (err, metadata) => {
+        if (err) {
+          return reject(err)
+        }
+
+        resolve(metadata)
+      })
+    })
+  },
+
   copy (src, dest) {
     debug('copying from %s to %s', src, dest)
 
@@ -64,25 +103,28 @@ module.exports = {
     const pt = stream.PassThrough()
     const ended = deferredPromise()
     let done = false
-    let written = false
-    let logErrors = true
     let wantsWrite = true
-    let skipped = 0
+    let skippedChunksCount = 0
+    let writtenChunksCount = 0
 
     _.defaults(options, {
       onError () {},
     })
 
-    const endVideoCapture = function () {
-      done = true
+    const endVideoCapture = function (waitForMoreChunksTimeout = 3000) {
+      debugFrames('frames written:', writtenChunksCount)
 
-      if (!written) {
-        // when no data has been written this will
-        // result in an 'pipe:0: End of file' error
-        // for so we need to account for that
-        // and not log errors to the console
-        logErrors = false
+      // in some cases (webm) ffmpeg will crash if fewer than 2 buffers are
+      // written to the stream, so we don't end capture until we get at least 2
+      if (writtenChunksCount < 2) {
+        return new Promise((resolve) => {
+          pt.once('data', resolve)
+        })
+        .then(endVideoCapture)
+        .timeout(waitForMoreChunksTimeout)
       }
+
+      done = true
 
       pt.end()
 
@@ -94,17 +136,6 @@ module.exports = {
     const lengths = {}
 
     const writeVideoFrame = function (data) {
-      // when `data` is empty, it is sent as an empty object (`{}`)
-      // which can crash the process. this can happen if there are
-      // errors in the video capture process, which are handled later
-      // on, so just skip empty frames here.
-      // @see https://github.com/cypress-io/cypress/pull/6818
-      if (_.isEmpty(data)) {
-        debug('empty chunk received %o', data)
-
-        return
-      }
-
       // make sure we haven't ended
       // our stream yet because paint
       // events can linger beyond
@@ -113,15 +144,28 @@ module.exports = {
         return
       }
 
-      // we have written at least 1 byte
-      written = true
+      // when `data` is empty, it is sent as an empty Buffer (`<Buffer >`)
+      // which can crash the process. this can happen if there are
+      // errors in the video capture process, which are handled later
+      // on, so just skip empty frames here.
+      // @see https://github.com/cypress-io/cypress/pull/6818
+      if (_.isEmpty(data)) {
+        debugFrames('empty chunk received %o', data)
 
-      debugFrames('writing video frame')
-
-      if (lengths[data.length]) {
         return
       }
 
+      if (lengths[data.length]) {
+        // this prevents multiple chunks of webm metadata from being written to the stream
+        // which would crash ffmpeg
+        debugFrames('duplicate length frame received:', data.length)
+
+        return
+      }
+
+      writtenChunksCount++
+
+      debugFrames('writing video frame')
       lengths[data.length] = true
 
       if (wantsWrite) {
@@ -133,9 +177,9 @@ module.exports = {
           })
         }
       } else {
-        skipped += 1
+        skippedChunksCount += 1
 
-        return debugFrames('skipping video frame %o', { skipped })
+        return debugFrames('skipping video frame %o', { skipped: skippedChunksCount })
       }
     }
 
@@ -161,11 +205,8 @@ module.exports = {
         }).on('error', (err, stdout, stderr) => {
           debug('capture errored: %o', { error: err.message, stdout, stderr })
 
-          // if we're supposed log errors then
-          // bubble them up
-          if (logErrors) {
-            options.onError(err, stdout, stderr)
-          }
+          // bubble errors up
+          options.onError(err, stdout, stderr)
 
           // reject the ended promise
           return ended.reject(err)
@@ -215,30 +256,53 @@ module.exports = {
     })
   },
 
-  process (name, cname, videoCompression, onProgress = function () {}) {
+  async process (name, cname, videoCompression, ffmpegchaptersConfig, onProgress = function () {}) {
+    const metaFileName = `${name}.meta`
+
+    const maybeGenerateMetaFile = Promise.method(() => {
+      if (!ffmpegchaptersConfig) {
+        return false
+      }
+
+      // Writing the metadata to filesystem is necessary because fluent-ffmpeg is just a wrapper of ffmpeg command.
+      return fs.writeFile(metaFileName, ffmpegchaptersConfig).then(() => true)
+    })
+
+    const addChaptersMeta = await maybeGenerateMetaFile()
+
     let total = null
 
     return new Promise((resolve, reject) => {
       debug('processing video from %s to %s video compression %o',
         name, cname, videoCompression)
 
-      ffmpeg()
-      .input(name)
-      .videoCodec('libx264')
-      .outputOptions([
+      const command = ffmpeg()
+      const outputOptions = [
         '-preset fast',
         `-crf ${videoCompression}`,
-      ])
+      ]
+
+      if (addChaptersMeta) {
+        command.input(metaFileName)
+        outputOptions.push('-map_metadata 1')
+      }
+
+      command.input(name)
+      .videoCodec('libx264')
+      .outputOptions(outputOptions)
       // .videoFilters("crop='floor(in_w/2)*2:floor(in_h/2)*2'")
       .on('start', (command) => {
-        return debug('compression started %o', { command })
-      }).on('codecData', (data) => {
+        debug('compression started %o', { command })
+      })
+      .on('codecData', (data) => {
         debug('compression codec data: %o', data)
 
         total = utils.timemarkToSeconds(data.duration)
-      }).on('stderr', (stderr) => {
-        return debug('compression stderr log %o', { message: stderr })
-      }).on('progress', (progress) => {
+      })
+      .on('stderr', (stderr) => {
+        debug('compression stderr log %o', { message: stderr })
+      })
+      .on('progress', (progress) => {
         // bail if we dont have total yet
         if (!total) {
           return
@@ -253,11 +317,13 @@ module.exports = {
         if (percent < 1) {
           return onProgress(percent)
         }
-      }).on('error', (err, stdout, stderr) => {
+      })
+      .on('error', (err, stdout, stderr) => {
         debug('compression errored: %o', { error: err.message, stdout, stderr })
 
         return reject(err)
-      }).on('end', () => {
+      })
+      .on('end', () => {
         debug('compression ended')
 
         // we are done progressing
@@ -266,6 +332,11 @@ module.exports = {
         // rename and obliterate the original
         return fs.moveAsync(cname, name, {
           overwrite: true,
+        })
+        .then(() => {
+          if (addChaptersMeta) {
+            return fs.unlink(metaFileName)
+          }
         })
         .then(() => {
           return resolve()

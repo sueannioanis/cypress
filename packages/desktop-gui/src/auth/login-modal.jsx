@@ -70,7 +70,7 @@ class LoginContent extends Component {
         <BootstrapModal.Dismiss className='btn btn-link close'>x</BootstrapModal.Dismiss>
         <h1><i className='fas fa-lock'></i> Log In</h1>
         <p>Logging in gives you access to the <a onClick={this._openDashboard}>Cypress Dashboard Service</a>. You can set up projects to be recorded and see test data from your project.</p>
-        <LoginForm onSuccess={() => this.setState({ succeeded: true })} />
+        <LoginForm utm='Nav Login Button' onSuccess={() => this.setState({ succeeded: true })} />
       </div>
     )
   }
@@ -80,10 +80,15 @@ class LoginContent extends Component {
       <div className='modal-body login'>
         <BootstrapModal.Dismiss className='btn btn-link close'>x</BootstrapModal.Dismiss>
         <h1><i className='fas fa-check'></i> Login Successful</h1>
-        <p>You are now logged in{authStore.user ? ` as ${authStore.user.name}` : ''}.</p>
+        <p>You are now logged in{authStore.user ? ` as ${authStore.user.displayName}` : ''}.</p>
+        {
+          !authStore.user.name ?
+            <p>Please go to the <a onClick={this._openDashboardProfile}>Cypress Dashboard</a> to complete the onboarding steps.</p> :
+            null
+        }
         <div className='login-content'>
           <button
-            className='btn btn-login btn-black btn-block'
+            className='btn btn-login btn-primary btn-wide'
             onClick={close}
           >
             Continue
@@ -113,6 +118,10 @@ class LoginContent extends Component {
         <a onClick={this._openAPIHelp}>Learn more</a>
       </div>
     )
+  }
+
+  _openDashboardProfile () {
+    ipc.externalOpen('https://on.cypress.io/dashboard/profile')
   }
 
   _openDashboard () {

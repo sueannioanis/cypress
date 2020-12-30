@@ -6,7 +6,11 @@ const http = require('http')
 const Jimp = require('jimp')
 const path = require('path')
 const Promise = require('bluebird')
+const { useFixedFirefoxResolution } = require('../../../utils')
 
+/**
+ * @type {Cypress.PluginConfig}
+ */
 module.exports = (on, config) => {
   let performance = {
     track: () => Promise.resolve(),
@@ -17,7 +21,6 @@ module.exports = (on, config) => {
   try {
     performance = require('../../../../test/support/helpers/performance')
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error(err)
   }
 
@@ -46,13 +49,7 @@ module.exports = (on, config) => {
   })
 
   on('before:browser:launch', (browser, options) => {
-    if (browser.family === 'firefox' && !config.env['NO_RESIZE']) {
-      // this is needed to ensure correct error screenshot / video recording
-      // resolution of exactly 1280x720 (height must account for firefox url bar)
-      options.args = options.args.concat(
-        ['-width', '1280', '-height', '794'],
-      )
-    }
+    useFixedFirefoxResolution(browser, options, config)
 
     if (browser.family === 'firefox' && process.env.FIREFOX_FORCE_STRICT_SAMESITE) {
       // @see https://www.jardinesoftware.net/2019/10/28/samesite-by-default-in-2020/
@@ -154,7 +151,6 @@ module.exports = (on, config) => {
 
     'record:fast_visit_spec' ({ percentiles, url, browser, currentRetry }) {
       percentiles.forEach(([percent, percentile]) => {
-        // eslint-disable-next-line no-console
         console.log(`${percent}%\t of visits to ${url} finished in less than ${percentile}ms`)
       })
 

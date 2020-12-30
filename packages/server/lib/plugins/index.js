@@ -2,9 +2,11 @@ const _ = require('lodash')
 const cp = require('child_process')
 const path = require('path')
 const debug = require('debug')('cypress:server:plugins')
+const resolve = require('resolve')
 const Promise = require('bluebird')
 const errors = require('../errors')
 const util = require('./util')
+const pkg = require('@packages/root')
 
 let pluginsProcess = null
 let registeredEvents = {}
@@ -37,6 +39,17 @@ const registerHandler = (handler) => {
 const init = (config, options) => {
   debug('plugins.init', config.pluginsFile)
 
+  // test and warn for incompatible plugin
+  try {
+    const retriesPluginPath = path.dirname(resolve.sync('cypress-plugin-retries', {
+      basedir: options.projectRoot,
+    }))
+
+    options.onWarning(errors.get('INCOMPATIBLE_PLUGIN_RETRIES', path.relative(options.projectRoot, retriesPluginPath)))
+  } catch (e) {
+    // noop, incompatible plugin not installed
+  }
+
   return new Promise((_resolve, _reject) => {
     // provide a safety net for fulfilling the promise because the
     // 'handleError' function below can potentially be triggered
@@ -55,7 +68,7 @@ const init = (config, options) => {
     const reject = fulfill(_reject)
 
     if (!config.pluginsFile) {
-      return resolve()
+      debug('no user plugins file')
     }
 
     if (pluginsProcess) {
@@ -65,8 +78,9 @@ const init = (config, options) => {
 
     registeredEvents = {}
 
+    const pluginsFile = config.pluginsFile || path.join(__dirname, 'child', 'default_plugins_file.js')
     const childIndexFilename = path.join(__dirname, 'child', 'index.js')
-    const childArguments = ['--file', config.pluginsFile, '--projectRoot', options.projectRoot]
+    const childArguments = ['--file', pluginsFile, '--projectRoot', options.projectRoot]
     const childOptions = {
       stdio: 'inherit',
     }
@@ -87,6 +101,7 @@ const init = (config, options) => {
     _.extend(config, {
       projectRoot: options.projectRoot,
       configFile: options.configFile,
+      version: pkg.version,
     })
 
     ipc.send('load', config)
@@ -103,6 +118,14 @@ const init = (config, options) => {
             const ids = {
               eventId: registration.eventId,
               invocationId,
+            }
+
+            // no argument is passed for cy.task()
+            // This is necessary because undefined becomes null when it is sent through ipc.
+            if (args[1] === undefined) {
+              args[1] = {
+                __cypress_task_no_argument__: true,
+              }
             }
 
             ipc.send('execute', registration.event, ids, args)

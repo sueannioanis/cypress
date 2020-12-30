@@ -57,13 +57,15 @@ const normalizeSameSite = (sameSite) => {
   return sameSite
 }
 
-module.exports = function (Commands, Cypress, cy, state, config) {
-  const maybeStripSameSiteProp = (cookie) => {
-    if (cookie && !Cypress.config('experimentalGetCookiesSameSite')) {
-      delete cookie.sameSite
-    }
-  }
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#Attributes
+function cookieValidatesHostPrefix (options) {
+  return options.secure === false || (options.path && options.path !== '/')
+}
+function cookieValidatesSecurePrefix (options) {
+  return options.secure === false
+}
 
+module.exports = function (Commands, Cypress, cy, state, config) {
   const automateCookies = function (event, obj = {}, log, timeout) {
     const automate = () => {
       return Cypress.automation(event, mergeDefaults(obj))
@@ -101,7 +103,7 @@ module.exports = function (Commands, Cypress, cy, state, config) {
         return resp
       }
 
-      // iterate over all of these and ensure none are whitelisted
+      // iterate over all of these and ensure none are allowed
       // or preserved
       const cookies = Cypress.Cookies.getClearableCookies(resp)
 
@@ -124,10 +126,15 @@ module.exports = function (Commands, Cypress, cy, state, config) {
           action,
           cmd: command,
           browserDisplayName: Cypress.browser.displayName,
-          errMessage: err.message,
-          errStack: err.stack,
+          error: err,
         },
         onFail,
+        errProps: {
+          appendToStack: {
+            title: 'From Node.js Internals',
+            content: err.stack,
+          },
+        },
       })
     }
   }
@@ -151,6 +158,7 @@ module.exports = function (Commands, Cypress, cy, state, config) {
       if (options.log) {
         options._log = Cypress.log({
           message: name,
+          timeout: options.timeout,
           consoleProps () {
             let c
             const obj = {}
@@ -177,8 +185,6 @@ module.exports = function (Commands, Cypress, cy, state, config) {
 
       return automateCookies('get:cookie', { name }, options._log, options.timeout)
       .then((resp) => {
-        maybeStripSameSiteProp(resp)
-
         options.cookie = resp
 
         return resp
@@ -197,6 +203,7 @@ module.exports = function (Commands, Cypress, cy, state, config) {
       if (options.log) {
         options._log = Cypress.log({
           message: '',
+          timeout: options.timeout,
           consoleProps () {
             let c
             const obj = {}
@@ -215,10 +222,6 @@ module.exports = function (Commands, Cypress, cy, state, config) {
 
       return automateCookies('get:cookies', _.pick(options, 'domain'), options._log, options.timeout)
       .then((resp) => {
-        if (Array.isArray(resp)) {
-          resp.forEach(maybeStripSameSiteProp)
-        }
-
         options.cookies = resp
 
         return resp
@@ -245,6 +248,7 @@ module.exports = function (Commands, Cypress, cy, state, config) {
       if (options.log) {
         options._log = Cypress.log({
           message: [name, value],
+          timeout: options.timeout,
           consoleProps () {
             let c
             const obj = {}
@@ -289,10 +293,16 @@ module.exports = function (Commands, Cypress, cy, state, config) {
         $errUtils.throwErrByPath('setCookie.invalid_arguments', { onFail })
       }
 
+      if (options.name.startsWith('__Secure-') && cookieValidatesSecurePrefix(options)) {
+        $errUtils.throwErrByPath('setCookie.secure_prefix', { onFail })
+      }
+
+      if (options.name.startsWith('__Host-') && cookieValidatesHostPrefix(options)) {
+        $errUtils.throwErrByPath('setCookie.host_prefix', { onFail })
+      }
+
       return automateCookies('set:cookie', cookie, options._log, options.timeout)
       .then((resp) => {
-        maybeStripSameSiteProp(resp)
-
         options.cookie = resp
 
         return resp
@@ -310,6 +320,7 @@ module.exports = function (Commands, Cypress, cy, state, config) {
       if (options.log) {
         options._log = Cypress.log({
           message: name,
+          timeout: options.timeout,
           consoleProps () {
             let c
             const obj = {}
@@ -357,6 +368,7 @@ module.exports = function (Commands, Cypress, cy, state, config) {
       if (options.log) {
         options._log = Cypress.log({
           message: '',
+          timeout: options.timeout,
           consoleProps () {
             let c
             const obj = {}

@@ -86,6 +86,7 @@ const checkOrUncheck = (Cypress, cy, type, subject, values = [], userOptions = {
       options._log = Cypress.log({
         message: deltaOptions,
         $el,
+        timeout: options.timeout,
         consoleProps () {
           return _.extend(consoleProps, {
             Options: deltaOptions,
@@ -126,6 +127,9 @@ const checkOrUncheck = (Cypress, cy, type, subject, values = [], userOptions = {
         force: options.force,
         timeout: options.timeout,
         interval: options.interval,
+        waitForAnimations: options.waitForAnimations,
+        animationDistanceThreshold: options.animationDistanceThreshold,
+        scrollBehavior: options.scrollBehavior,
       }).then(() => {
         if (options._log) {
           options._log.snapshot().end()

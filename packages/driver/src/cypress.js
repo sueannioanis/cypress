@@ -1,6 +1,5 @@
 const _ = require('lodash')
 const $ = require('jquery')
-const chai = require('chai')
 const blobUtil = require('blob-util')
 const minimatch = require('minimatch')
 const moment = require('moment')
@@ -30,13 +29,10 @@ const $Screenshot = require('./cypress/screenshot')
 const $SelectorPlayground = require('./cypress/selector_playground')
 const $utils = require('./cypress/utils')
 const $errUtils = require('./cypress/error_utils')
+const $scriptUtils = require('./cypress/script_utils')
 const browserInfo = require('./cypress/browser')
+const resolvers = require('./cypress/resolvers')
 const debug = require('debug')('cypress:driver:cypress')
-
-const proxies = {
-  runner: 'getStartTime getTestsState getEmissions setNumLogs countByTestState getDisplayPropsForLog getConsolePropsForLogById getSnapshotPropsForLogById getErrorByTestId setStartTime resumeAtTest normalizeAll'.split(' '),
-  cy: 'detachDom getStyles'.split(' '),
-}
 
 const jqueryProxyFn = function (...args) {
   if (!this.cy) {
@@ -44,36 +40,6 @@ const jqueryProxyFn = function (...args) {
   }
 
   return this.cy.$$.apply(this.cy, args)
-}
-
-_.extend(jqueryProxyFn, $)
-
-// provide the old interface and
-// throw a deprecation message
-$Log.command = () => {
-  return $errUtils.throwErrByPath('miscellaneous.command_log_renamed')
-}
-
-const throwDeprecatedCommandInterface = (key = 'commandName', method) => {
-  let signature = ''
-
-  switch (method) {
-    case 'addParentCommand':
-      signature = `'${key}', function(){...}`
-      break
-    case 'addChildCommand':
-      signature = `'${key}', { prevSubject: true }, function(){...}`
-      break
-    case 'addDualCommand':
-      signature = `'${key}', { prevSubject: 'optional' }, function(){...}`
-      break
-    default:
-      break
-  }
-
-  $errUtils.throwErrByPath('miscellaneous.custom_command_interface_changed', {
-    args: { method, signature },
-  })
 }
 
 const throwPrivateCommandInterface = (method) => {
@@ -89,9 +55,13 @@ class $Cypress {
     this.mocha = null
     this.runner = null
     this.Commands = null
-    this._RESUMED_AT_TEST = null
+    this.$autIframe = null
+    this.onSpecReady = null
 
     this.events = $Events.extend(this)
+    this.$ = jqueryProxyFn.bind(this)
+
+    _.extend(this.$, $)
 
     this.setConfig(config)
   }
@@ -153,6 +123,8 @@ class $Cypress {
       longStackTraces: config.isInteractive,
     })
 
+    // TODO: env is unintentionally preserved between soft reruns unlike config.
+    // change this in the NEXT_BREAKING
     const { env } = config
 
     config = _.omit(config, 'env', 'remote', 'resolved', 'scaffoldedFiles', 'javascripts', 'state')
@@ -162,15 +134,29 @@ class $Cypress {
     this.state = $SetterGetter.create({})
     this.config = $SetterGetter.create(config)
     this.env = $SetterGetter.create(env)
-    this.getFirefoxGcInterval = $FirefoxForcedGc.createIntervalGetter(this.config)
+    this.getFirefoxGcInterval = $FirefoxForcedGc.createIntervalGetter(this)
+    this.getTestRetries = function () {
+      const testRetries = this.config('retries')
+
+      if (_.isNumber(testRetries)) {
+        return testRetries
+      }
+
+      if (_.isObject(testRetries)) {
+        return testRetries[this.config('isInteractive') ? 'openMode' : 'runMode']
+      }
+
+      return null
+    }
 
     this.Cookies = $Cookies.create(config.namespace, d)
 
     return this.action('cypress:config', config)
   }
 
-  initialize ($autIframe) {
-    return this.cy.initialize($autIframe)
+  initialize ({ $autIframe, onSpecReady }) {
+    this.$autIframe = $autIframe
+    this.onSpecReady = onSpecReady
   }
 
   run (fn) {
@@ -186,7 +172,7 @@ class $Cypress {
   // specs or support files have been downloaded
   // or parsed. we have not received any custom commands
   // at this point
-  onSpecWindow (specWindow) {
+  onSpecWindow (specWindow, scripts) {
     const logFn = (...args) => {
       return this.log.apply(this, args)
     }
@@ -196,7 +182,7 @@ class $Cypress {
     window.cy = this.cy
     this.isCy = this.cy.isCy
     this.log = $Log.create(this, this.cy, this.state, this.config)
-    this.mocha = $Mocha.create(specWindow, this)
+    this.mocha = $Mocha.create(specWindow, this, this.config)
     this.runner = $Runner.create(specWindow, this.mocha, this, this.cy)
 
     // wire up command create to cy
@@ -206,7 +192,17 @@ class $Cypress {
 
     $FirefoxForcedGc.install(this)
 
-    return null
+    $scriptUtils.runScripts(specWindow, scripts)
+    .catch((err) => {
+      err = $errUtils.createUncaughtException('spec', err)
+
+      this.runner.onScriptError(err)
+    })
+    .then(() => {
+      this.cy.initialize(this.$autIframe)
+
+      this.onSpecReady()
+    })
   }
 
   action (eventName, ...args) {
@@ -228,7 +224,7 @@ class $Cypress {
         // mocha runner has begun running the tests
         this.emit('run:start')
 
-        if (this._RESUMED_AT_TEST) {
+        if (this.runner.getResumedAtTestIndex() !== null) {
           return
         }
 
@@ -255,11 +251,6 @@ class $Cypress {
         }
 
         break
-
-      case 'runner:set:runnable':
-        // when there is a hook / test (runnable) that
-        // is about to be invoked
-        return this.cy.setRunnable(...args)
 
       case 'runner:suite:start':
         // mocha runner started processing a suite
@@ -310,6 +301,8 @@ class $Cypress {
 
       case 'runner:pass':
         // mocha runner calculated a pass
+        // this is delayed from when mocha would normally fire it
+        // since we fire it after all afterEach hooks have ran
         if (this.config('isTextTerminal')) {
           return this.emit('mocha', 'pass', ...args)
         }
@@ -325,23 +318,18 @@ class $Cypress {
         break
 
       case 'runner:fail': {
-        // mocha runner calculated a failure
-        const err = args[0].err
-
-        if (err.type === 'existence' || $dom.isDom(err.actual) || $dom.isDom(err.expected)) {
-          err.showDiff = false
-        }
-
-        if (err.actual) {
-          err.actual = chai.util.inspect(err.actual)
-        }
-
-        if (err.expected) {
-          err.expected = chai.util.inspect(err.expected)
-        }
-
         if (this.config('isTextTerminal')) {
           return this.emit('mocha', 'fail', ...args)
+        }
+
+        break
+      }
+      // retry event only fired in mocha version 6+
+      // https://github.com/mochajs/mocha/commit/2a76dd7589e4a1ed14dd2a33ab89f182e4c4a050
+      case 'runner:retry': {
+        // mocha runner calculated a pass
+        if (this.config('isTextTerminal')) {
+          this.emit('mocha', 'retry', ...args)
         }
 
         break
@@ -352,9 +340,16 @@ class $Cypress {
 
       case 'runner:test:before:run':
         // get back to a clean slate
-        this.cy.reset()
+        this.cy.reset(...args)
 
-        return this.emit('test:before:run', ...args)
+        if (this.config('isTextTerminal')) {
+          // needed for handling test retries
+          this.emit('mocha', 'test:before:run', args[0])
+        }
+
+        this.emit('test:before:run', ...args)
+
+        break
 
       case 'runner:test:before:run:async':
         // TODO: handle timeouts here? or in the runner?
@@ -544,22 +539,15 @@ class $Cypress {
   }
 
   stop () {
+    if (!this.runner) {
+      // the tests have been reloaded
+      return
+    }
+
     this.runner.stop()
     this.cy.stop()
 
     return this.action('cypress:stop')
-  }
-
-  addChildCommand (key) {
-    return throwDeprecatedCommandInterface(key, 'addChildCommand')
-  }
-
-  addParentCommand (key) {
-    return throwDeprecatedCommandInterface(key, 'addParentCommand')
-  }
-
-  addDualCommand (key) {
-    return throwDeprecatedCommandInterface(key, 'addDualCommand')
   }
 
   addAssertionCommand () {
@@ -575,7 +563,27 @@ class $Cypress {
   }
 }
 
-$Cypress.prototype.$ = jqueryProxyFn
+function wrapMoment (moment) {
+  function deprecatedFunction (...args) {
+    $errUtils.warnByPath('moment.deprecated')
+
+    return moment.apply(moment, args)
+  }
+  // copy all existing properties from "moment" like "moment.duration"
+  _.keys(moment).forEach((key) => {
+    const value = moment[key]
+
+    if (_.isFunction(value)) {
+      // recursively wrap any property that can be called by the user
+      // so that Cypress.moment.duration() shows deprecated message
+      deprecatedFunction[key] = wrapMoment(value)
+    } else {
+      deprecatedFunction[key] = value
+    }
+  })
+
+  return deprecatedFunction
+}
 
 // attach to $Cypress to access
 // all of the constructors
@@ -593,6 +601,8 @@ $Cypress.prototype.Location = $Location
 $Cypress.prototype.Log = $Log
 $Cypress.prototype.LocalStorage = $LocalStorage
 $Cypress.prototype.Mocha = $Mocha
+$Cypress.prototype.resolveWindowReference = resolvers.resolveWindowReference
+$Cypress.prototype.resolveLocationReference = resolvers.resolveLocationReference
 $Cypress.prototype.Mouse = $Mouse
 $Cypress.prototype.Runner = $Runner
 $Cypress.prototype.Server = $Server
@@ -600,27 +610,16 @@ $Cypress.prototype.Screenshot = $Screenshot
 $Cypress.prototype.SelectorPlayground = $SelectorPlayground
 $Cypress.prototype.utils = $utils
 $Cypress.prototype._ = _
-$Cypress.prototype.moment = moment
+$Cypress.prototype.moment = wrapMoment(moment)
 $Cypress.prototype.Blob = blobUtil
 $Cypress.prototype.Promise = Promise
 $Cypress.prototype.minimatch = minimatch
 $Cypress.prototype.sinon = sinon
 $Cypress.prototype.lolex = lolex
 
-// proxy all of the methods in proxies
-// to their corresponding objects
-_.each(proxies, (methods, key) => {
-  return _.each(methods, (method) => {
-    return $Cypress.prototype[method] = function (...args) {
-      const prop = this[key]
-
-      return prop && prop[method].apply(prop, args)
-    }
-  })
-})
-
 // attaching these so they are accessible
 // via the runner + integration spec helper
 $Cypress.$ = $
+$Cypress.utils = $utils
 
 module.exports = $Cypress

@@ -33,7 +33,8 @@ export type Browser = {
   displayName: string
   /** RegExp to use to extract version from something like "Google Chrome 58.0.3029.110" */
   versionRegex: RegExp
-  profile?: boolean
+  /** If set, this is the base path that will be used for setting userDataDir. Useful for creating profiles in snap confinement. */
+  profilePath?: string
   /** A single binary name or array of binary names for this browser. Not used on Windows. */
   binary: string | string[]
   /** optional warning that will be shown in the GUI */
@@ -71,4 +72,9 @@ export type LauncherApi = {
     goalBrowsers?: Browser[]
   ) => Promise<FoundBrowser>
   launch: (browser: FoundBrowser, url: string, args: string[]) => ChildProcess
+}
+
+export type PathData = {
+  path: string
+  browserKey?: string
 }

@@ -6,8 +6,6 @@ const Promise = require('bluebird')
 const commitInfo = require('@cypress/commit-info')
 const la = require('lazy-ass')
 const check = require('check-more-types')
-const tsnode = require('ts-node')
-const resolve = require('resolve')
 const scaffoldDebug = require('debug')('cypress:server:scaffold')
 const debug = require('debug')('cypress:server:project')
 const cwd = require('./cwd')
@@ -53,7 +51,7 @@ class Project extends EE {
     }
 
     this.projectRoot = path.resolve(projectRoot)
-    this.watchers = Watchers()
+    this.watchers = new Watchers()
     this.cfg = null
     this.spec = null
     this.browser = null
@@ -67,7 +65,7 @@ class Project extends EE {
   open (options = {}) {
     debug('opening project instance %s', this.projectRoot)
     debug('project open options %o', options)
-    this.server = Server()
+    this.server = new Server()
 
     _.defaults(options, {
       report: false,
@@ -101,23 +99,6 @@ class Project extends EE {
 
         return scaffold.plugins(path.dirname(cfg.pluginsFile), cfg)
       }
-    }).then((cfg) => {
-      try {
-        const tsPath = resolve.sync('typescript', {
-          basedir: this.projectRoot,
-        })
-
-        debug('typescript path: %s', tsPath)
-
-        tsnode.register({
-          compiler: tsPath,
-          transpileOnly: true,
-        })
-      } catch (e) {
-        debug(`typescript doesn't exist. ts-node setup passed.`)
-      }
-
-      return cfg
     }).then((cfg) => {
       return this._initPlugins(cfg, options)
       .then((modifiedCfg) => {
@@ -171,10 +152,10 @@ class Project extends EE {
 
   _initPlugins (cfg, options) {
     // only init plugins with the
-    // whitelisted config values to
+    // allowed config values to
     // prevent tampering with the
     // internals and breaking cypress
-    cfg = config.whitelist(cfg)
+    cfg = config.allowed(cfg)
 
     return plugins.init(cfg, {
       projectRoot: this.projectRoot,
@@ -498,12 +479,18 @@ class Project extends EE {
     })
   }
 
-  getSpecUrl (absoluteSpecPath) {
+  getSpecUrl (absoluteSpecPath, specType) {
+    debug('get spec url: %s for spec type %s', absoluteSpecPath, specType)
+
     return this.getConfig()
     .then((cfg) => {
-      // if we dont have a absoluteSpecPath or its __all
+      // if we don't have a absoluteSpecPath or its __all
       if (!absoluteSpecPath || (absoluteSpecPath === '__all')) {
-        return this.normalizeSpecUrl(cfg.browserUrl, '/__all')
+        const url = this.normalizeSpecUrl(cfg.browserUrl, '/__all')
+
+        debug('returning url to run all specs: %s', url)
+
+        return url
       }
 
       // TODO:
@@ -513,14 +500,17 @@ class Project extends EE {
       // the unit folder?
       // once we determine that we can then prefix it correctly
       // with either integration or unit
-      const prefixedPath = this.getPrefixedPathToSpec(cfg, absoluteSpecPath)
+      const prefixedPath = this.getPrefixedPathToSpec(cfg, absoluteSpecPath, specType)
+      const url = this.normalizeSpecUrl(cfg.browserUrl, prefixedPath)
 
-      return this.normalizeSpecUrl(cfg.browserUrl, prefixedPath)
+      debug('return path to spec %o', { specType, absoluteSpecPath, prefixedPath, url })
+
+      return url
     })
   }
 
   getPrefixedPathToSpec (cfg, pathToSpec, type = 'integration') {
-    const { integrationFolder, projectRoot } = cfg
+    const { integrationFolder, componentFolder, projectRoot } = cfg
 
     // for now hard code the 'type' as integration
     // but in the future accept something different here
@@ -529,13 +519,20 @@ class Project extends EE {
     // example:
     //
     // /Users/bmann/Dev/cypress-app/.projects/cypress/integration
-    // /Users/bmann/Dev/cypress-app/.projects/cypress/integration/foo.coffee
+    // /Users/bmann/Dev/cypress-app/.projects/cypress/integration/foo.js
     //
-    // becomes /integration/foo.coffee
-    return `/${path.join(type, path.relative(
-      integrationFolder,
+    // becomes /integration/foo.js
+
+    const folderToUse = type === 'integration' ? integrationFolder : componentFolder
+
+    const url = `/${path.join(type, path.relative(
+      folderToUse,
       path.resolve(projectRoot, pathToSpec),
     ))}`
+
+    debug('prefixed path for spec %o', { pathToSpec, type, url })
+
+    return url
   }
 
   normalizeSpecUrl (browserUrl, specUrl) {
@@ -565,11 +562,20 @@ class Project extends EE {
     // and example support file if dir doesnt exist
     push(scaffold.support(cfg.supportFolder, cfg))
 
-    // if we're in headed mode add these other scaffolding
-    // tasks
-    if (!cfg.isTextTerminal) {
+    // if we're in headed mode add these other scaffolding tasks
+    debug('scaffold flags %o', {
+      isTextTerminal: cfg.isTextTerminal,
+      CYPRESS_INTERNAL_FORCE_SCAFFOLD: process.env.CYPRESS_INTERNAL_FORCE_SCAFFOLD,
+    })
+
+    const scaffoldExamples = !cfg.isTextTerminal || process.env.CYPRESS_INTERNAL_FORCE_SCAFFOLD
+
+    if (scaffoldExamples) {
+      debug('will scaffold integration and fixtures folder')
       push(scaffold.integration(cfg.integrationFolder, cfg))
       push(scaffold.fixture(cfg.fixturesFolder, cfg))
+    } else {
+      debug('will not scaffold integration or fixtures folder')
     }
 
     return Promise.all(scaffolds)
@@ -833,6 +839,7 @@ class Project extends EE {
       // file path from projectRoot
       // ie: **/* turns into /Users/bmann/dev/project/**/*
       specPattern = path.resolve(projectRoot, specPattern)
+      debug('full spec pattern "%s"', specPattern)
     }
 
     return new Project(projectRoot)

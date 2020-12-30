@@ -4,17 +4,19 @@ import _ from 'lodash'
 import * as linuxHelper from '../../lib/linux'
 import 'chai-as-promised'
 import { log } from '../log'
-import { detect } from '../../lib/detect'
+import { detect, firefoxGcWarning } from '../../lib/detect'
+import { browsers } from '../../lib/browsers'
 import { goalBrowsers } from '../fixtures'
 import { expect } from 'chai'
 import { utils } from '../../lib/utils'
+import os from 'os'
 import sinon, { SinonStub } from 'sinon'
 
 describe('linux browser detection', () => {
   let execa: SinonStub
 
   beforeEach(() => {
-    execa = sinon.stub(utils, 'execa')
+    execa = sinon.stub(utils, 'getOutput')
 
     execa.withArgs('test-browser', ['--version'])
     .resolves({ stdout: 'test-browser v100.1.2.3' })
@@ -43,6 +45,30 @@ describe('linux browser detection', () => {
     return linuxHelper.detect(goal).then(checkBrowser)
   })
 
+  // https://github.com/cypress-io/cypress/pull/7039
+  it('sets profilePath on snapcraft chromium', () => {
+    execa.withArgs('chromium', ['--version'])
+    .resolves({ stdout: 'Chromium 1.2.3 snap' })
+
+    sinon.stub(os, 'platform').returns('linux')
+    sinon.stub(os, 'homedir').returns('/home/foo')
+
+    const checkBrowser = ([browser]) => {
+      expect(browser).to.deep.equal({
+        channel: 'stable',
+        name: 'chromium',
+        family: 'chromium',
+        displayName: 'Chromium',
+        majorVersion: 1,
+        path: 'chromium',
+        profilePath: '/home/foo/snap/chromium/current',
+        version: '1.2.3',
+      })
+    }
+
+    return detect().then(checkBrowser)
+  })
+
   // https://github.com/cypress-io/cypress/issues/6669
   it('detects browser if the --version stdout is multiline', () => {
     execa.withArgs('multiline-foo', ['--version'])
@@ -64,6 +90,18 @@ describe('linux browser detection', () => {
 
     // @ts-ignore
     return linuxHelper.detect(goal).then(checkBrowser)
+  })
+
+  // @see https://github.com/cypress-io/cypress/issues/8241
+  it('adds warnings to Firefox versions less than 80', async () => {
+    const goalFirefox = _.find(browsers, { binary: 'firefox' })
+
+    execa.withArgs('firefox', ['--version'])
+    .resolves({ stdout: 'Mozilla Firefox 79.1' })
+
+    expect((await detect([goalFirefox]))[0]).to.include({
+      warning: firefoxGcWarning,
+    })
   })
 
   // despite using detect(), this test is in linux/spec instead of detect_spec because it is
@@ -100,7 +138,6 @@ describe('linux browser detection', () => {
       {
         name: 'foo-browser',
         versionRegex: /v(\S+)$/,
-        profile: true,
         binary: ['foo-browser', 'foo-bar-browser'],
       },
     ]

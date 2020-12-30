@@ -1,5 +1,3 @@
-/// <reference types="cypress" />
-
 import sinon, { SinonStub, SinonSpy } from 'sinon'
 import { EventEmitter } from 'events'
 
@@ -17,7 +15,7 @@ const runnerStub = () => {
   } as EventEmitterStub
 }
 
-describe('controls', function () {
+describe('shortcuts', function () {
   let runner: EventEmitterStub
 
   beforeEach(function () {
@@ -25,10 +23,14 @@ describe('controls', function () {
 
     cy.fixture('runnables').as('runnables')
 
-    cy.visit('/dist').then((win) => {
+    cy.visit('/').then((win) => {
       win.render({
         runner,
-        specPath: '/foo/bar',
+        spec: {
+          name: 'foo.js',
+          relative: 'relative/path/to/foo.js',
+          absolute: '/absolute/path/to/foo.js',
+        },
       })
     })
 
@@ -46,6 +48,18 @@ describe('controls', function () {
 
       cy.get('body').type('s').then(() => {
         expect(runner.emit).to.have.been.calledWith('runner:stop')
+      })
+    })
+
+    it('does not stop tests when paused', () => {
+      cy.get('body').then(() => {
+        expect(runner.emit).not.to.have.been.calledWith('runner:stop')
+      })
+
+      runner.on.withArgs('paused').callArgWith(1, 'next command')
+
+      cy.get('body').type('s').then(() => {
+        expect(runner.emit).not.to.have.been.calledWith('runner:stop')
       })
     })
 
@@ -76,7 +90,7 @@ describe('controls', function () {
         // need to add an input since this environment is isolated
         $body.append('<input id="temp-input" />')
       })
-      .get('#temp-input').type('r')
+      .get('#temp-input').type('r', { force: true })
       .then(() => {
         expect(runner.emit).not.to.have.been.calledWith('runner:restart')
       })

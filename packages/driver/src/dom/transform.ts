@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import { getParent } from './elements'
 import { isDocument } from './document'
 
 export const detectVisibility = ($el: any) => {
@@ -39,7 +40,7 @@ const extractTransformInfoFromElements = ($el: any, list: TransformInfo[] = []):
     list.push(info)
   }
 
-  const $parent = $el.parent()
+  const $parent = getParent($el)
 
   if (!$parent.length || isDocument($parent)) {
     return list
@@ -224,7 +225,7 @@ const toUnitVector = (v: Vector3): Vector3 => {
 
 // This function checks 2 things that can happen: scale and rotate to 0 in width or height.
 const elIsTransformedToZero = (list: TransformInfo[]) => {
-  if (list[1].transformStyle === 'preserve-3d') {
+  if (list.some((info) => info.transformStyle === 'preserve-3d')) {
     const normal = finalNormal(0, list)
 
     return isElementOrthogonalWithView(normal)

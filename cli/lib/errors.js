@@ -9,13 +9,36 @@ const state = require('./tasks/state')
 
 const docsUrl = 'https://on.cypress.io'
 const requiredDependenciesUrl = `${docsUrl}/required-dependencies`
+const runDocumentationUrl = `${docsUrl}/cypress-run`
 
 // TODO it would be nice if all error objects could be enforced via types
 // to only have description + solution properties
 
 const hr = '----------'
 
+const genericErrorSolution = stripIndent`
+  Search for an existing issue or open a GitHub issue at
+
+    ${chalk.blue(util.issuesUrl)}
+`
+
 // common errors Cypress application can encounter
+const unknownError = {
+  description: 'Unknown Cypress CLI error',
+  solution: genericErrorSolution,
+}
+
+const invalidRunProjectPath = {
+  description: 'Invalid --project path',
+  solution: stripIndent`
+    Please provide a valid project path.
+
+    Learn more about ${chalk.cyan('cypress run')} at:
+
+      ${chalk.blue(runDocumentationUrl)}
+  `,
+}
+
 const failedDownload = {
   description: 'The Cypress App could not be downloaded.',
   solution: stripIndent`
@@ -26,11 +49,7 @@ const failedDownload = {
 
 const failedUnzip = {
   description: 'The Cypress App could not be unzipped.',
-  solution: stripIndent`
-    Search for an existing issue or open a GitHub issue at
-
-      ${chalk.blue(util.issuesUrl)}
-  `,
+  solution: genericErrorSolution,
 }
 
 const missingApp = (binaryDir) => {
@@ -54,6 +73,8 @@ const binaryNotExecutable = (executable) => {
     - the cypress npm package as 'root' or with 'sudo'
 
     Please check that you have the appropriate user permissions.
+
+    You can also try clearing the cache with 'cypress cache clear' and reinstalling. 
   `,
   }
 }
@@ -208,29 +229,6 @@ const childProcessKilled = (eventName, signal) => {
     description: `The Test Runner unexpectedly exited via a ${chalk.cyan(eventName)} event with signal ${chalk.cyan(signal)}`,
     solution: solutionUnknown,
   }
-}
-
-const removed = {
-  CYPRESS_BINARY_VERSION: {
-    description: stripIndent`
-    The environment variable CYPRESS_BINARY_VERSION has been renamed to CYPRESS_INSTALL_BINARY as of version ${chalk.green(
-    '3.0.0',
-  )}
-    `,
-    solution: stripIndent`
-    You should set CYPRESS_INSTALL_BINARY instead.
-    `,
-  },
-  CYPRESS_SKIP_BINARY_INSTALL: {
-    description: stripIndent`
-    The environment variable CYPRESS_SKIP_BINARY_INSTALL has been removed as of version ${chalk.green(
-    '3.0.0',
-  )}
-    `,
-    solution: stripIndent`
-      To skip the binary install, set CYPRESS_INSTALL_BINARY=0
-    `,
-  },
 }
 
 const CYPRESS_RUN_BINARY = {
@@ -390,6 +388,7 @@ module.exports = {
   getError,
   hr,
   errors: {
+    unknownError,
     nonZeroExitCodeXvfb,
     missingXvfb,
     missingApp,
@@ -403,10 +402,10 @@ module.exports = {
     failedUnzip,
     invalidCypressEnv,
     invalidCacheDirectory,
-    removed,
     CYPRESS_RUN_BINARY,
     smokeTestFailure,
     childProcessKilled,
     incompatibleHeadlessFlags,
+    invalidRunProjectPath,
   },
 }

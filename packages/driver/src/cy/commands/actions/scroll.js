@@ -7,7 +7,7 @@ const $utils = require('../../../cypress/utils')
 const $errUtils = require('../../../cypress/error_utils')
 
 const findScrollableParent = ($el, win) => {
-  const $parent = $el.parent()
+  const $parent = $dom.getParent($el)
 
   // if we're at the body, we just want to pass in
   // window into jQuery scrollTo
@@ -90,6 +90,7 @@ module.exports = (Commands, Cypress, cy, state) => {
         const log = {
           $el: options.$el,
           message: deltaOptions,
+          timeout: options.timeout,
           consoleProps () {
             const obj = {
               // merge into consoleProps without mutating it
@@ -261,6 +262,7 @@ module.exports = (Commands, Cypress, cy, state) => {
         duration: 0,
         easing: 'swing',
         axis: 'xy',
+        ensureScrollable: true,
         x,
         y,
       })
@@ -273,6 +275,10 @@ module.exports = (Commands, Cypress, cy, state) => {
 
       if (!((options.easing === 'swing') || (options.easing === 'linear'))) {
         $errUtils.throwErrByPath('scrollTo.invalid_easing', { args: { easing: options.easing } })
+      }
+
+      if (!_.isBoolean(options.ensureScrollable)) {
+        $errUtils.throwErrByPath('scrollTo.invalid_ensureScrollable', { args: { ensureScrollable: options.ensureScrollable } })
       }
 
       // if we cannot parse an integer out of y or x
@@ -302,6 +308,7 @@ module.exports = (Commands, Cypress, cy, state) => {
 
         const log = {
           message: messageArgs.join(', '),
+          timeout: options.timeout,
           consoleProps () {
             // merge into consoleProps without mutating it
             const obj = {}
@@ -331,6 +338,12 @@ module.exports = (Commands, Cypress, cy, state) => {
       }
 
       const ensureScrollability = () => {
+        // Some elements are not scrollable, user may opt out of error checking
+        // https://github.com/cypress-io/cypress/issues/1924
+        if (!options.ensureScrollable) {
+          return
+        }
+
         try {
           // make sure our container can even be scrolled
           return cy.ensureScrollability($container, 'scrollTo')
@@ -348,6 +361,7 @@ module.exports = (Commands, Cypress, cy, state) => {
             axis: options.axis,
             easing: options.easing,
             duration: options.duration,
+            ensureScrollable: options.ensureScrollable,
             done () {
               return resolve(options.$el)
             },

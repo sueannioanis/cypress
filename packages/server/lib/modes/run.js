@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console, @cypress/dev/arrow-body-multiline-braces  */
 const _ = require('lodash')
 const la = require('lazy-ass')
 const pkg = require('@packages/root')
@@ -16,6 +16,7 @@ const Reporter = require('../reporter')
 const browserUtils = require('../browsers')
 const openProject = require('../open_project')
 const videoCapture = require('../video_capture')
+const runEvents = require('../plugins/run_events')
 const fs = require('../util/fs')
 const env = require('../util/env')
 const trash = require('../util/trash')
@@ -30,6 +31,7 @@ const electronApp = require('../util/electron-app')
 const settings = require('../util/settings')
 const chromePolicyCheck = require('../util/chrome_policy_check')
 const experiments = require('../experiments')
+const objUtils = require('../util/obj_utils')
 
 const DELAY_TO_LET_VIDEO_FINISH_MS = 1000
 
@@ -619,8 +621,8 @@ const createAndOpenProject = function (socketId, options) {
   })
 }
 
-const removeOldProfiles = () => {
-  return browserUtils.removeOldProfiles()
+const removeOldProfiles = (browser) => {
+  return browserUtils.removeOldProfiles(browser)
   .catch((err) => {
     // dont make removing old browsers profiles break the build
     return errors.warning('CANNOT_REMOVE_OLD_BROWSER_PROFILES', err.stack)
@@ -645,17 +647,18 @@ const trashAssets = Promise.method((config = {}) => {
 const createVideoRecording = function (videoName, options = {}) {
   const outputDir = path.dirname(videoName)
 
+  const onError = _.once((err) => {
+    // catch video recording failures and log them out
+    // but don't let this affect the run at all
+    return errors.warning('VIDEO_RECORDING_FAILED', err.stack)
+  })
+
   return fs
   .ensureDirAsync(outputDir)
+  .catch(onError)
   .then(() => {
     return videoCapture
-    .start(videoName, _.extend({}, options, {
-      onError (err) {
-        // catch video recording failures and log them out
-        // but don't let this affect the run at all
-        return errors.warning('VIDEO_RECORDING_FAILED', err.stack)
-      },
-    }))
+    .start(videoName, _.extend({}, options, { onError }))
   })
 }
 
@@ -700,6 +703,12 @@ const maybeStartVideoRecording = Promise.method(function (options = {}) {
     }
   })
 })
+
+const warnVideoRecordingFailed = (err) => {
+  // log that post processing was attempted
+  // but failed and dont let this change the run exit code
+  errors.warning('VIDEO_POST_PROCESSING_FAILED', err.stack)
+}
 
 module.exports = {
   collectTestResults,
@@ -806,101 +815,99 @@ module.exports = {
     console.log('')
   },
 
-  postProcessRecording (end, name, cname, videoCompression, shouldUploadVideo) {
+  async postProcessRecording (name, cname, videoCompression, shouldUploadVideo, quiet, ffmpegChaptersConfig) {
     debug('ending the video recording %o', { name, videoCompression, shouldUploadVideo })
 
     // once this ended promises resolves
     // then begin processing the file
-    return end()
-    .then(() => {
-      // dont process anything if videoCompress is off
-      // or we've been told not to upload the video
-      if (videoCompression === false || shouldUploadVideo === false) {
-        return
+    // dont process anything if videoCompress is off
+    // or we've been told not to upload the video
+    if (videoCompression === false || shouldUploadVideo === false) {
+      return
+    }
+
+    function continueProcessing (onProgress = undefined) {
+      return videoCapture.process(name, cname, videoCompression, ffmpegChaptersConfig, onProgress)
+    }
+
+    if (quiet) {
+      return continueProcessing()
+    }
+
+    console.log('')
+
+    terminal.header('Video', {
+      color: ['cyan'],
+    })
+
+    console.log('')
+
+    const table = terminal.table({
+      colWidths: [3, 21, 76],
+      colAligns: ['left', 'left', 'left'],
+      type: 'noBorder',
+      style: {
+        'padding-right': 0,
+      },
+      chars: {
+        'left': ' ',
+        'right': '',
+      },
+    })
+
+    table.push([
+      gray('-'),
+      gray('Started processing:'),
+      chalk.cyan(`Compressing to ${videoCompression} CRF`),
+    ])
+
+    console.log(table.toString())
+
+    const started = Date.now()
+    let progress = Date.now()
+    const throttle = env.get('VIDEO_COMPRESSION_THROTTLE') || human('10 seconds')
+
+    const onProgress = function (float) {
+      if (float === 1) {
+        const finished = Date.now() - started
+        const dur = `(${humanTime.long(finished)})`
+
+        const table = terminal.table({
+          colWidths: [3, 21, 61, 15],
+          colAligns: ['left', 'left', 'left', 'right'],
+          type: 'noBorder',
+          style: {
+            'padding-right': 0,
+          },
+          chars: {
+            'left': ' ',
+            'right': '',
+          },
+        })
+
+        table.push([
+          gray('-'),
+          gray('Finished processing:'),
+          `${formatPath(name, getWidth(table, 2), 'cyan')}`,
+          gray(dur),
+        ])
+
+        console.log(table.toString())
+
+        console.log('')
       }
 
-      console.log('')
+      if (Date.now() - progress > throttle) {
+        // bump up the progress so we dont
+        // continuously get notifications
+        progress += throttle
+        const percentage = `${Math.ceil(float * 100)}%`
 
-      terminal.header('Video', {
-        color: ['cyan'],
-      })
-
-      console.log('')
-
-      const table = terminal.table({
-        colWidths: [3, 21, 76],
-        colAligns: ['left', 'left', 'left'],
-        type: 'noBorder',
-        style: {
-          'padding-right': 0,
-        },
-        chars: {
-          'left': ' ',
-          'right': '',
-        },
-      })
-
-      table.push([
-        gray('-'),
-        gray('Started processing:'),
-        chalk.cyan(`Compressing to ${videoCompression} CRF`),
-      ])
-
-      console.log(table.toString())
-
-      const started = Date.now()
-      let progress = Date.now()
-      const throttle = env.get('VIDEO_COMPRESSION_THROTTLE') || human('10 seconds')
-
-      const onProgress = function (float) {
-        if (float === 1) {
-          const finished = Date.now() - started
-          const dur = `(${humanTime.long(finished)})`
-
-          const table = terminal.table({
-            colWidths: [3, 21, 61, 15],
-            colAligns: ['left', 'left', 'left', 'right'],
-            type: 'noBorder',
-            style: {
-              'padding-right': 0,
-            },
-            chars: {
-              'left': ' ',
-              'right': '',
-            },
-          })
-
-          table.push([
-            gray('-'),
-            gray('Finished processing:'),
-            `${formatPath(name, getWidth(table, 2), 'cyan')}`,
-            gray(dur),
-          ])
-
-          console.log(table.toString())
-
-          console.log('')
-        }
-
-        if (Date.now() - progress > throttle) {
-          // bump up the progress so we dont
-          // continuously get notifications
-          progress += throttle
-          const percentage = `${Math.ceil(float * 100)}%`
-
-          console.log('    Compression progress: ', chalk.cyan(percentage))
-        }
+        console.log('    Compression progress: ', chalk.cyan(percentage))
       }
+    }
 
-      // bar.tickTotal(float)
-
-      return videoCapture.process(name, cname, videoCompression, onProgress)
-    })
-    .catch((err) => {
-      // log that post processing was attempted
-      // but failed and dont let this change the run exit code
-      errors.warning('VIDEO_POST_PROCESSING_FAILED', err.stack)
-    })
+    return continueProcessing(onProgress)
   },
 
   launchBrowser (options = {}) {
@@ -911,7 +918,16 @@ module.exports = {
     browserOpts.automationMiddleware = {
       onAfterResponse: (message, data, resp) => {
         if (message === 'take:screenshot' && resp) {
-          screenshots.push(this.screenshotMetadata(data, resp))
+          const existingScreenshot = _.findIndex(screenshots, { path: resp.path })
+
+          if (existingScreenshot !== -1) {
+            // NOTE: saving screenshots to the same path will overwrite the previous one
+            // so we shouldn't report more screenshots than exist on disk.
+            // this happens when cy.screenshot is used in a retried test
+            screenshots.splice(existingScreenshot, 1, this.screenshotMetadata(data, resp))
+          } else {
+            screenshots.push(this.screenshotMetadata(data, resp))
+          }
         }
 
         return resp
@@ -995,7 +1011,7 @@ module.exports = {
 
   waitForBrowserToConnect (options = {}) {
     const { project, socketId, timeout, onError } = options
-
+    const browserTimeout = process.env.CYPRESS_INTERNAL_BROWSER_CONNECT_TIMEOUT || timeout || 60000
     let attempts = 0
 
     const wait = () => {
@@ -1011,7 +1027,7 @@ module.exports = {
           debug('browser launched')
         }),
       )
-      .timeout(timeout || 60000)
+      .timeout(browserTimeout)
       .catch(Promise.TimeoutError, (err) => {
         attempts += 1
 
@@ -1064,7 +1080,7 @@ module.exports = {
   },
 
   waitForTestsToFinishRunning (options = {}) {
-    const { project, screenshots, startedVideoCapture, endVideoCapture, videoName, compressedVideoName, videoCompression, videoUploadOnPasses, exit, spec, estimated } = options
+    const { project, screenshots, startedVideoCapture, endVideoCapture, videoName, compressedVideoName, videoCompression, videoUploadOnPasses, exit, spec, estimated, quiet, config } = options
 
     // https://github.com/cypress-io/cypress/issues/2370
     // delay 1 second if we're recording a video to give
@@ -1074,8 +1090,8 @@ module.exports = {
 
     return this.listenForProjectEnd(project, exit)
     .delay(delay)
-    .then((obj) => {
-      _.defaults(obj, {
+    .then(async (results) => {
+      _.defaults(results, {
         error: null,
         hooks: null,
         tests: null,
@@ -1085,62 +1101,79 @@ module.exports = {
       })
 
       if (startedVideoCapture) {
-        obj.video = videoName
+        results.video = videoName
       }
 
       if (screenshots) {
-        obj.screenshots = screenshots
+        results.screenshots = screenshots
       }
 
-      obj.spec = spec
+      results.spec = spec
 
-      const finish = () => {
-        return obj
-      }
-
-      this.displayResults(obj, estimated)
-
-      if (screenshots && screenshots.length) {
-        this.displayScreenshots(screenshots)
-      }
-
-      const { tests, stats } = obj
-
-      const hasFailingTests = _.get(stats, 'failures') > 0
+      const { tests, stats } = results
+      const attempts = _.flatMap(tests, (test) => test.attempts)
 
       // if we have a video recording
       if (startedVideoCapture && tests && tests.length) {
         // always set the video timestamp on tests
-        obj.tests = Reporter.setVideoTimestamp(startedVideoCapture, tests)
+        Reporter.setVideoTimestamp(startedVideoCapture, attempts)
       }
 
+      let videoCaptureFailed = false
+
+      if (endVideoCapture) {
+        await endVideoCapture()
+        .tapCatch(() => videoCaptureFailed = true)
+        .catch(warnVideoRecordingFailed)
+      }
+
+      await runEvents.execute('after:spec', config, spec, results)
+
+      const videoExists = videoName ? await fs.pathExists(videoName) : false
+
+      if (startedVideoCapture && !videoExists) {
+        // the video file no longer exists at the path where we expect it,
+        // likely because the user deleted it in the after:spec event
+        errors.warning('VIDEO_DOESNT_EXIST', videoName)
+
+        results.video = null
+      }
+
+      const hasFailingTests = _.get(stats, 'failures') > 0
       // we should upload the video if we upload on passes (by default)
       // or if we have any failures and have started the video
-      const suv = Boolean(videoUploadOnPasses === true || (startedVideoCapture && hasFailingTests))
+      const shouldUploadVideo = videoUploadOnPasses === true || Boolean((startedVideoCapture && hasFailingTests))
 
-      obj.shouldUploadVideo = suv
+      results.shouldUploadVideo = shouldUploadVideo
 
-      debug('attempting to close the browser')
+      if (!quiet) {
+        this.displayResults(results, estimated)
+        if (screenshots && screenshots.length) {
+          this.displayScreenshots(screenshots)
+        }
+      }
 
       // always close the browser now as opposed to letting
       // it exit naturally with the parent process due to
       // electron bug in windows
-      return openProject
-      .closeBrowser()
-      .then(() => {
-        if (endVideoCapture) {
-          return this.postProcessRecording(
-            endVideoCapture,
-            videoName,
-            compressedVideoName,
-            videoCompression,
-            suv,
-          ).then(finish)
-          // TODO: add a catch here
-        }
+      debug('attempting to close the browser')
+      await openProject.closeBrowser()
 
-        return finish()
-      })
+      if (videoExists && endVideoCapture && !videoCaptureFailed) {
+        const ffmpegChaptersConfig = videoCapture.generateFfmpegChaptersConfig(results.tests)
+
+        await this.postProcessRecording(
+          videoName,
+          compressedVideoName,
+          videoCompression,
+          shouldUploadVideo,
+          quiet,
+          ffmpegChaptersConfig,
+        )
+        .catch(warnVideoRecordingFailed)
+      }
+
+      return results
     })
   },
 
@@ -1149,6 +1182,7 @@ module.exports = {
       screenshotId: random.id(),
       name: data.name || null,
       testId: data.testId,
+      testAttemptIndex: data.testAttemptIndex,
       takenAt: resp.takenAt,
       path: resp.path,
       height: resp.dimensions.height,
@@ -1190,36 +1224,57 @@ module.exports = {
       config,
     }
 
-    displayRunStarting({
-      config,
-      specs,
-      group,
-      tag,
-      runUrl,
-      browser,
-      parallel,
-      specPattern,
-    })
+    if (!options.quiet) {
+      displayRunStarting({
+        config,
+        specs,
+        group,
+        tag,
+        runUrl,
+        browser,
+        parallel,
+        specPattern,
+      })
+    }
 
     const runEachSpec = (spec, index, length, estimated) => {
-      displaySpecHeader(spec.name, index + 1, length, estimated)
+      if (!options.quiet) {
+        displaySpecHeader(spec.name, index + 1, length, estimated)
+      }
 
-      return this.runSpec(spec, options, estimated)
+      return this.runSpec(config, spec, options, estimated)
       .get('results')
       .tap((results) => {
         return debug('spec results %o', results)
       })
     }
 
-    return iterateThroughSpecs({
-      specs,
+    const beforeRunDetails = {
+      browser,
       config,
+      cypressVersion: pkg.version,
+      group,
       parallel,
-      runEachSpec,
-      afterSpecRun,
-      beforeSpecRun,
+      runUrl,
+      specs,
+      specPattern,
+      system: _.pick(sys, 'osName', 'osVersion'),
+      tag,
+    }
+
+    return runEvents.execute('before:run', config, beforeRunDetails)
+    .then(() => {
+      return iterateThroughSpecs({
+        specs,
+        config,
+        parallel,
+        runEachSpec,
+        afterSpecRun,
+        beforeSpecRun,
+      })
     })
     .then((runs = []) => {
+      results.status = 'finished'
       results.startedTestsAt = getRun(_.first(runs), 'stats.wallClockStartedAt')
       results.endedTestsAt = getRun(_.last(runs), 'stats.wallClockEndedAt')
       results.totalDuration = sumByProp(runs, 'stats.wallClockDuration')
@@ -1233,11 +1288,50 @@ module.exports = {
 
       debug('final results of all runs: %o', results)
 
-      return writeOutput(outputPath, results).return(results)
+      const { each, remapKeys, remove, renameKey, setValue } = objUtils
+
+      // Remap results for module API/after:run to remove private props and
+      // rename props to make more user-friendly
+      const moduleAPIResults = remapKeys(results, {
+        runs: each((run) => ({
+          tests: each((test) => ({
+            attempts: each((attempt, i) => ({
+              timings: remove,
+              failedFromHookId: remove,
+              wallClockDuration: renameKey('duration'),
+              wallClockStartedAt: renameKey('startedAt'),
+              wallClockEndedAt: renameKey('endedAt'),
+              screenshots: setValue(
+                _(run.screenshots)
+                .filter({ testId: test.testId, testAttemptIndex: i })
+                .map((screenshot) => _.omit(screenshot,
+                  ['screenshotId', 'testId', 'testAttemptIndex']))
+                .value(),
+              ),
+            })),
+            testId: remove,
+          })),
+          hooks: each({
+            hookId: remove,
+          }),
+          stats: {
+            wallClockDuration: renameKey('duration'),
+            wallClockStartedAt: renameKey('startedAt'),
+            wallClockEndedAt: renameKey('endedAt'),
+          },
+          screenshots: remove,
+        })),
+      })
+
+      return runEvents.execute('after:run', config, moduleAPIResults)
+      .then(() => {
+        return writeOutput(outputPath, moduleAPIResults)
+      })
+      .return(results)
     })
   },
 
-  runSpec (spec = {}, options = {}, estimated) {
+  runSpec (config, spec = {}, options = {}, estimated) {
     const { project, browser, onError } = options
 
     const { isHeadless } = browser
@@ -1255,22 +1349,25 @@ module.exports = {
 
     const screenshots = []
 
+    return runEvents.execute('before:spec', config, spec)
+    .then(() => {
     // we know we're done running headlessly
     // when the renderer has connected and
     // finishes running all of the tests.
     // we're using an event emitter interface
     // to gracefully handle this in promise land
-
-    return this.maybeStartVideoRecording({
-      spec,
-      browser,
-      video: options.video,
-      videosFolder: options.videosFolder,
+      return this.maybeStartVideoRecording({
+        spec,
+        browser,
+        video: options.video,
+        videosFolder: options.videosFolder,
+      })
     })
     .then((videoRecordProps = {}) => {
       return Promise.props({
         results: this.waitForTestsToFinishRunning({
           spec,
+          config,
           project,
           estimated,
           screenshots,
@@ -1281,6 +1378,7 @@ module.exports = {
           exit: options.exit,
           videoCompression: options.videoCompression,
           videoUploadOnPasses: options.videoUploadOnPasses,
+          quiet: options.quiet,
         }),
 
         connection: this.waitForBrowserToConnect({
@@ -1321,6 +1419,7 @@ module.exports = {
     _.defaults(options, {
       isTextTerminal: true,
       browser: 'electron',
+      quiet: false,
     })
 
     const socketId = random.id()
@@ -1329,15 +1428,12 @@ module.exports = {
 
     // this needs to be a closure over `this.exitEarly` and not a reference
     // because `this.exitEarly` gets overwritten in `this.listenForProjectEnd`
-    options.onError = (err) => {
+    const onError = options.onError = (err) => {
       this.exitEarly(err)
     }
 
     // alias and coerce to null
     let specPattern = options.spec || null
-
-    // warn if we're using deprecated --ci flag
-    recordMode.warnIfCiFlag(options.ci)
 
     // ensure the project exists
     // and open up the project
@@ -1368,10 +1464,9 @@ module.exports = {
         // speed the initial booting time
         return Promise.all([
           system.info(),
-          browserUtils.ensureAndGetByNameOrPath(browserName, false, userBrowsers),
+          browserUtils.ensureAndGetByNameOrPath(browserName, false, userBrowsers).tap(removeOldProfiles),
           this.findSpecs(config, specPattern),
           trashAssets(config),
-          removeOldProfiles(),
         ])
         .spread((sys = {}, browser = {}, specs = []) => {
         // return only what is return to the specPattern
@@ -1395,6 +1490,7 @@ module.exports = {
               specPattern,
               socketId,
               parallel,
+              onError,
               browser,
               project,
               runUrl,
@@ -1409,9 +1505,14 @@ module.exports = {
               videoUploadOnPasses: config.videoUploadOnPasses,
               exit: options.exit,
               headed: options.headed,
+              quiet: options.quiet,
               outputPath: options.outputPath,
             })
-            .tap(renderSummaryTable(runUrl))
+            .tap((runSpecs) => {
+              if (!options.quiet) {
+                renderSummaryTable(runUrl)(runSpecs)
+              }
+            })
           }
 
           if (record) {

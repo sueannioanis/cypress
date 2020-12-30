@@ -2,12 +2,13 @@ branches:
   only:
     - master
     - develop
+    - revert-create-cypress-tests
     - /win*/
 
 # https://www.appveyor.com/docs/lang/nodejs-iojs/
 environment:
   # use matching version of Node.js
-  nodejs_version: "12.8.1"
+  nodejs_version: "12.18.3"
   # encode secure variables which will NOT be used
   # in pull requests
   # https://www.appveyor.com/docs/build-configuration/#secure-variables
@@ -65,6 +66,7 @@ install:
   # clean cache to prevent install permission issues
   - yarn cache clean
   - yarn --frozen-lockfile || yarn --frozen-lockfile || yarn --frozen-lockfile
+  - yarn build-prod
   - .\node_modules\.bin\print-arch
 
 # Post-install test scripts.

@@ -1,4 +1,4 @@
-const e2e = require('../support/helpers/e2e')
+const e2e = require('../support/helpers/e2e').default
 
 // https://github.com/cypress-io/cypress/issues/4313
 context('cy.visit performance tests', function () {
@@ -29,7 +29,7 @@ context('cy.visit performance tests', function () {
 
   e2e.it('passes', {
     onStdout,
-    spec: 'fast_visit_spec.coffee',
+    spec: 'fast_visit_spec.js',
     snapshot: true,
     onRun (exec, browser, ctx) {
       return exec({

@@ -6,23 +6,64 @@ const spawn = require('./spawn')
 const verify = require('../tasks/verify')
 const { exitWithError, errors } = require('../errors')
 
-// maps options collected by the CLI
-// and forms list of CLI arguments to the server
+/**
+ * Throws an error with "details" property from
+ * "errors" object.
+ * @param {Object} details - Error details
+ */
+const throwInvalidOptionError = (details) => {
+  if (!details) {
+    details = errors.unknownError
+  }
+
+  // throw this error synchronously, it will be caught later on and
+  // the details will be propagated to the promise chain
+  const err = new Error()
+
+  err.details = details
+  throw err
+}
+
+/**
+ * Typically a user passes a string path to the project.
+ * But "cypress open" allows using `false` to open in global mode,
+ * and the user can accidentally execute `cypress run --project false`
+ * which should be invalid.
+ */
+const isValidProject = (v) => {
+  if (typeof v === 'boolean') {
+    return false
+  }
+
+  if (v === '' || v === 'false' || v === 'true') {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Maps options collected by the CLI
+ * and forms list of CLI arguments to the server.
+ *
+ * Note: there is lightweight validation, with errors
+ * thrown synchronously.
+ *
+ * @returns {string[]} list of CLI arguments
+ */
 const processRunOptions = (options = {}) => {
   debug('processing run options %o', options)
+
+  if (!isValidProject(options.project)) {
+    debug('invalid project option %o', { project: options.project })
+
+    return throwInvalidOptionError(errors.invalidRunProjectPath)
+  }
 
   const args = ['--run-project', options.project]
 
   if (options.browser) {
     args.push('--browser', options.browser)
-  }
-
-  if (options.ci) {
-    // push to display the deprecation message
-    args.push('--ci')
-
-    // also automatically record
-    args.push('--record', true)
   }
 
   if (options.ciBuildId) {
@@ -55,12 +96,7 @@ const processRunOptions = (options = {}) => {
 
   if (options.headless) {
     if (options.headed) {
-      // throw this error synchronously, it will be caught later on and
-      // the details will be propagated to the promise chain
-      const err = new Error()
-
-      err.details = errors.incompatibleHeadlessFlags
-      throw err
+      return throwInvalidOptionError(errors.incompatibleHeadlessFlags)
     }
 
     args.push('--headed', !options.headless)
@@ -69,7 +105,7 @@ const processRunOptions = (options = {}) => {
   // if key is set use that - else attempt to find it by environment variable
   if (options.key == null) {
     debug('--key is not set, looking up environment variable CYPRESS_RECORD_KEY')
-    options.key = util.getEnv('CYPRESS_RECORD_KEY') || util.getEnv('CYPRESS_CI_KEY')
+    options.key = util.getEnv('CYPRESS_RECORD_KEY')
   }
 
   // if we have a key assume we're in record mode
@@ -89,9 +125,13 @@ const processRunOptions = (options = {}) => {
     args.push('--port', options.port)
   }
 
+  if (options.quiet) {
+    args.push('--quiet')
+  }
+
   // if record is defined and we're not
   // already in ci mode, then send it up
-  if (options.record != null && !options.ci) {
+  if (options.record != null) {
     args.push('--record', options.record)
   }
 
@@ -119,6 +159,7 @@ const processRunOptions = (options = {}) => {
 
 module.exports = {
   processRunOptions,
+  isValidProject,
   // resolves with the number of failed tests
   start (options = {}) {
     _.defaults(options, {

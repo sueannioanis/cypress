@@ -28,6 +28,7 @@ module.exports = (Commands, Cypress, cy) => {
         options._log = Cypress.log({
           message: deltaOptions,
           $el: options.$el,
+          timeout: options.timeout,
           consoleProps () {
             // merge into consoleProps without mutating it
             return _.extend({}, consoleProps, {
@@ -73,10 +74,10 @@ module.exports = (Commands, Cypress, cy) => {
       }
 
       const getOptions = () => {
-        // throw if <select> is disabled
         let notAllUniqueValues
 
-        if (options.$el.prop('disabled')) {
+        // throw if <select> is disabled
+        if (!options.force && options.$el.prop('disabled')) {
           node = $dom.stringify(options.$el)
           $errUtils.throwErrByPath('select.disabled', { args: { node } })
         }
@@ -145,6 +146,16 @@ module.exports = (Commands, Cypress, cy) => {
             node = $dom.stringify($el)
 
             $errUtils.throwErrByPath('select.option_disabled', {
+              args: { node },
+            })
+          }
+        })
+
+        _.each(optionEls, ($el) => {
+          if ($el.closest('optgroup').prop('disabled')) {
+            node = $dom.stringify($el)
+
+            $errUtils.throwErrByPath('select.optgroup_disabled', {
               args: { node },
             })
           }
@@ -246,7 +257,7 @@ module.exports = (Commands, Cypress, cy) => {
 
             change.initEvent('change', true, false)
 
-            return options.$el.get(0).dispatchEvent(change)
+            options.$el.get(0).dispatchEvent(change)
           })
         }).then(() => {
           const verifyAssertions = () => {

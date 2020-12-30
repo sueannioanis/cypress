@@ -35,15 +35,16 @@ exports['errors individual has the following errors 1'] = [
   "incompatibleHeadlessFlags",
   "invalidCacheDirectory",
   "invalidCypressEnv",
+  "invalidRunProjectPath",
   "invalidSmokeTestDisplayError",
   "missingApp",
   "missingDependency",
   "missingXvfb",
   "nonZeroExitCodeXvfb",
   "notInstalledCI",
-  "removed",
   "smokeTestFailure",
   "unexpected",
+  "unknownError",
   "versionMismatch"
 ]
 

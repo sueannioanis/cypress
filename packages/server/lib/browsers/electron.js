@@ -66,12 +66,12 @@ const _getAutomation = function (win, options) {
   return automation
 }
 
-const _installExtensions = function (extensionPaths = [], options) {
-  Windows.removeAllExtensions()
+const _installExtensions = function (win, extensionPaths = [], options) {
+  Windows.removeAllExtensions(win)
 
-  return extensionPaths.forEach((path) => {
+  return Bluebird.map(extensionPaths, (path) => {
     try {
-      return Windows.installExtension(path)
+      return Windows.installExtension(win, path)
     } catch (error) {
       return options.onWarning(errors.get('EXTENSION_NOT_LOADED', 'Electron', path))
     }
@@ -91,6 +91,7 @@ const _maybeRecordVideo = function (webContents, options) {
     webContents.debugger.on('message', (event, method, params) => {
       if (method === 'Page.screencastFrame') {
         onScreencastFrame(params)
+        webContents.debugger.sendCommand('Page.screencastFrameAck', { sessionId: params.sessionId })
       }
     })
 
@@ -120,6 +121,9 @@ module.exports = {
         x: 'browserX',
         y: 'browserY',
         devTools: 'isBrowserDevToolsOpen',
+      },
+      webPreferences: {
+        sandbox: true,
       },
       onFocus () {
         if (options.show) {
@@ -349,10 +353,10 @@ module.exports = {
 
       debug('launching browser window to url: %s', url)
 
-      _installExtensions(launchOptions.extensions, options)
-
       return this._render(url, projectRoot, automation, preferences)
-      .then((win) => {
+      .then(async (win) => {
+        await _installExtensions(win, launchOptions.extensions, options)
+
         // cause the webview to receive focus so that
         // native browser focus + blur events fire correctly
         // https://github.com/cypress-io/cypress/issues/1939
@@ -363,7 +367,7 @@ module.exports = {
         win.once('closed', () => {
           debug('closed event fired')
 
-          Windows.removeAllExtensions()
+          Windows.removeAllExtensions(win)
 
           return events.emit('exit')
         })

@@ -3,6 +3,7 @@ const la = require('lazy-ass')
 const is = require('check-more-types')
 const path = require('path')
 const fs = require('fs')
+const execa = require('execa')
 
 /* eslint-disable no-console */
 
@@ -69,8 +70,7 @@ const shorten = (s) => {
 const getShortCommit = () => {
   const sha =
     process.env.APPVEYOR_REPO_COMMIT ||
-    process.env.CIRCLE_SHA1 ||
-    process.env.BUILDKITE_COMMIT
+    process.env.CIRCLE_SHA1
 
   if (sha) {
     return {
@@ -114,10 +114,31 @@ const getCIBuildUrl = () => {
   }
 }
 
+const seconds = (s) => s * 1000
+const minutes = (m) => m * 60 * 1000
+
+const getCurrentBranch = async () => {
+  const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'])
+
+  return stdout
+}
+
+const getPackagePath = ({ location }) => path.join(location, 'package.json')
+
+const readPackageJson = (pack) => JSON.parse(fs.readFileSync(getPackagePath(pack)))
+
+const independentTagRegex = (name) => new RegExp(`^${name}-v(.+)`)
+
 module.exports = {
   getNameAndBinary,
   getJustVersion,
   getShortCommit,
   getCIName,
   getCIBuildUrl,
+  seconds,
+  minutes,
+  getCurrentBranch,
+  getPackagePath,
+  readPackageJson,
+  independentTagRegex,
 }

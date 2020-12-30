@@ -1,109 +1,122 @@
-/// <reference types="cypress" />
-
 import { EventEmitter } from 'events'
+import { RootRunnable } from '../../src/runnables/runnables-store'
 
-describe('controls', function () {
-  beforeEach(function () {
-    cy.fixture('runnables').as('runnables')
+describe('tests', () => {
+  let runner: EventEmitter
+  let runnables: RootRunnable
 
-    this.runner = new EventEmitter()
+  beforeEach(() => {
+    cy.fixture('runnables').then((_runnables) => {
+      runnables = _runnables
+    })
 
-    cy.visit('/dist').then((win) => {
+    runner = new EventEmitter()
+
+    cy.visit('/').then((win) => {
       win.render({
-        runner: this.runner,
-        specPath: '/foo/bar',
+        runner,
+        spec: {
+          name: 'foo.js',
+          relative: 'relative/path/to/foo.js',
+          absolute: '/absolute/path/to/foo.js',
+        },
       })
     })
 
     cy.get('.reporter').then(() => {
-      this.runner.emit('runnables:ready', this.runnables)
-
-      this.runner.emit('reporter:start', {})
+      runner.emit('runnables:ready', runnables)
+      runner.emit('reporter:start', {})
     })
   })
 
-  describe('tests', function () {
-    beforeEach(function () {
-      this.passingTestTitle = this.runnables.suites[0].tests[0].title
-      this.failingTestTitle = this.runnables.suites[0].tests[1].title
+  it('includes the class "test"', () => {
+    cy.contains('test 1')
+    .closest('.runnable')
+    .should('have.class', 'test')
+  })
+
+  it('includes the state as a class', () => {
+    cy.contains('suite 1')
+    .closest('.runnable')
+    .should('have.class', 'runnable-failed')
+
+    cy.contains('suite 2')
+    .closest('.runnable')
+    .should('have.class', 'runnable-passed')
+  })
+
+  describe('expand and collapse', () => {
+    beforeEach(() => {
+      cy.contains('test 1')
+      .parents('.collapsible').first().as('testWrapper')
     })
 
-    describe('expand and collapse', function () {
-      it('is collapsed by default', function () {
-        cy.contains(this.passingTestTitle)
-        .parents('.runnable-wrapper').as('testWrapper')
-        .should('not.have.class', 'is-open')
-        .find('.collapsible-content')
-        .should('not.be.visible')
-      })
-
-      describe('expand/collapse test manually', function () {
-        beforeEach(function () {
-          cy.contains(this.passingTestTitle)
-          .parents('.runnable-wrapper').as('testWrapper')
-          .should('not.have.class', 'is-open')
-          .find('.collapsible-content')
-          .should('not.be.visible')
-        })
-
-        it('expands/collapses on click', function () {
-          cy.contains(this.passingTestTitle)
-          .click()
-
-          cy.get('@testWrapper')
-          .should('have.class', 'is-open')
-          .find('.collapsible-content').should('be.visible')
-
-          cy.contains(this.passingTestTitle)
-          .click()
-
-          cy.get('@testWrapper')
-          .should('not.have.class', 'is-open')
-          .find('.collapsible-content').should('not.be.visible')
-        })
-
-        it('expands/collapses on enter', function () {
-          cy.contains(this.passingTestTitle)
-          .focus().type('{enter}')
-
-          cy.get('@testWrapper')
-          .should('have.class', 'is-open')
-          .find('.collapsible-content').should('be.visible')
-
-          cy.contains(this.passingTestTitle)
-          .focus().type('{enter}')
-
-          cy.get('@testWrapper')
-          .should('not.have.class', 'is-open')
-          .find('.collapsible-content').should('not.be.visible')
-        })
-
-        it('expands/collapses on space', function () {
-          cy.contains(this.passingTestTitle)
-          .focus().type(' ')
-
-          cy.get('@testWrapper')
-          .should('have.class', 'is-open')
-          .find('.collapsible-content').should('be.visible')
-
-          cy.contains(this.passingTestTitle)
-          .focus().type(' ')
-
-          cy.get('@testWrapper')
-          .should('not.have.class', 'is-open')
-          .find('.collapsible-content').should('not.be.visible')
-        })
-      })
+    it('is collapsed by default', () => {
+      cy.contains('test 1')
+      .parents('.collapsible').first()
+      .should('not.have.class', 'is-open')
+      .find('.collapsible-content')
+      .should('not.be.visible')
     })
 
-    describe('failed tests', function () {
-      it('expands automatically', function () {
-        cy.contains(this.failingTestTitle)
-        .parents('.runnable-wrapper').as('testWrapper')
-        .should('have.class', 'is-open')
-        .find('.collapsible-content')
-        .should('be.visible')
-      })
+    it('failed tests expands automatically', () => {
+      cy.contains('test 2')
+      .parents('.collapsible').first()
+      .should('have.class', 'is-open')
+      .find('.collapsible-content')
+      .should('be.visible')
+    })
+
+    it('expands/collapses on click', () => {
+      cy.contains('test 1')
+      .click()
+
+      cy.get('@testWrapper')
+      .should('have.class', 'is-open')
+      .find('.collapsible-content').should('be.visible')
+
+      cy.contains('test 1')
+      .click()
+
+      cy.get('@testWrapper')
+      .should('not.have.class', 'is-open')
+      .find('.collapsible-content').should('not.be.visible')
+    })
+
+    it('expands/collapses on enter', () => {
+      cy.contains('test 1')
+      .parents('.collapsible-header').first()
+      .focus().type('{enter}')
+
+      cy.get('@testWrapper')
+      .should('have.class', 'is-open')
+      .find('.collapsible-content').should('be.visible')
+
+      cy.contains('test 1')
+      .parents('.collapsible-header').first()
+      .focus().type('{enter}')
+
+      cy.get('@testWrapper')
+      .should('not.have.class', 'is-open')
+      .find('.collapsible-content').should('not.be.visible')
+    })
+
+    it('expands/collapses on space', () => {
+      cy.contains('test 1')
+      .parents('.collapsible-header').first()
+      .focus().type(' ')
+
+      cy.get('@testWrapper')
+      .should('have.class', 'is-open')
+      .find('.collapsible-content').should('be.visible')
+
+      cy.contains('test 1')
+      .parents('.collapsible-header').first()
+      .focus().type(' ')
+
+      cy.get('@testWrapper')
+      .should('not.have.class', 'is-open')
+      .find('.collapsible-content').should('not.be.visible')
     })
   })
 })

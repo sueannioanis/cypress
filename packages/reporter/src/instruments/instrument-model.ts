@@ -6,7 +6,7 @@ export interface AliasObject {
   ordinal?: string
 }
 
-export type Alias = string | Array<string> | null | AliasObject
+export type Alias = string | Array<string> | null | AliasObject | Array<AliasObject>
 
 export interface InstrumentProps {
   id: number
@@ -16,10 +16,11 @@ export interface InstrumentProps {
   name?: string
   message?: string
   type?: string
+  testCurrentRetry: number
   state?: string | null
   referencesAlias?: Alias
   instrument?: 'agent' | 'command' | 'route'
-  testId: number
+  testId: string
 }
 
 export default class Log {

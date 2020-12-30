@@ -5,8 +5,29 @@ const $dom = require('../../../dom')
 const $errUtils = require('../../../cypress/error_utils')
 const $actionability = require('../../actionability')
 
-const dispatch = (target, eventName, options) => {
-  const event = new Event(eventName, options)
+const dispatch = (target, appWindow, eventName, options) => {
+  const eventConstructor = options.eventConstructor ?? 'Event'
+  const ctor = appWindow[eventConstructor]
+
+  if (typeof ctor !== 'function') {
+    $errUtils.throwErrByPath('trigger.invalid_event_type', {
+      args: { eventConstructor },
+    })
+  }
+
+  // eventConstructor property should not be added to event instance.
+  delete options.eventConstructor
+
+  // https://github.com/cypress-io/cypress/issues/3686
+  // UIEvent and its derived events like MouseEvent, KeyboardEvent
+  // has a property, view, which is the window object where the event happened.
+  // Logic below checks the ctor function is UIEvent itself or its children
+  // and adds view to the instance init object.
+  if (ctor === appWindow['UIEvent'] || ctor.prototype instanceof appWindow['UIEvent']) {
+    options.view = appWindow
+  }
+
+  const event = new ctor(eventName, options)
 
   // some options, like clientX & clientY, must be set on the
   // instance instead of passing them into the constructor
@@ -33,6 +54,7 @@ module.exports = (Commands, Cypress, cy, state, config) => {
         y,
         waitForAnimations: config('waitForAnimations'),
         animationDistanceThreshold: config('animationDistanceThreshold'),
+        scrollBehavior: config('scrollBehavior'),
       })
 
       if ($dom.isWindow(options.$el)) {
@@ -47,6 +69,7 @@ module.exports = (Commands, Cypress, cy, state, config) => {
       if (options.log) {
         options._log = Cypress.log({
           $el: subject,
+          timeout: options.timeout,
           consoleProps () {
             return {
               'Yielded': subject,
@@ -84,7 +107,7 @@ module.exports = (Commands, Cypress, cy, state, config) => {
 
       const trigger = () => {
         if (dispatchEarly) {
-          return dispatch(subject, eventName, eventOptions)
+          return dispatch(subject, state('window'), eventName, eventOptions)
         }
 
         return $actionability.verify(cy, subject, options, {
@@ -111,7 +134,7 @@ module.exports = (Commands, Cypress, cy, state, config) => {
               pageY: fromElWindow.y,
             }, eventOptions)
 
-            return dispatch($elToClick.get(0), eventName, eventOptions)
+            return dispatch($elToClick.get(0), state('window'), eventName, eventOptions)
           },
         })
       }

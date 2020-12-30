@@ -1,4 +1,3 @@
-import cs from 'classnames'
 import { action } from 'mobx'
 import { observer } from 'mobx-react'
 import PropTypes from 'prop-types'
@@ -7,7 +6,7 @@ import { render } from 'react-dom'
 // @ts-ignore
 import EQ from 'css-element-queries/src/ElementQueries'
 
-import { Error } from './errors/an-error'
+import { RunnablesErrorModel } from './runnables/runnable-error'
 import appState, { AppState } from './lib/app-state'
 import events, { Runner, Events } from './lib/events'
 import ForcedGcWarning from './lib/forced-gc-warning'
@@ -27,8 +26,8 @@ export interface ReporterProps {
   scroller: Scroller
   statsStore: StatsStore
   events: Events
-  error?: Error
-  specPath: string
+  error?: RunnablesErrorModel
+  spec: Cypress.Cypress['spec']
 }
 
 @observer
@@ -45,7 +44,11 @@ class Reporter extends Component<ReporterProps> {
       emit: PropTypes.func.isRequired,
       on: PropTypes.func.isRequired,
     }).isRequired,
-    specPath: PropTypes.string.isRequired,
+    spec: PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      relative: PropTypes.string.isRequired,
+      absolute: PropTypes.string.isRequired,
+    }),
   }
 
   static defaultProps = {
@@ -60,14 +63,14 @@ class Reporter extends Component<ReporterProps> {
     const { appState } = this.props
 
     return (
-      <div className={cs('reporter', { 'is-running': appState.isRunning })}>
+      <div className='reporter'>
         <Header appState={appState} statsStore={this.props.statsStore} />
         <Runnables
           appState={appState}
           error={this.props.error}
           runnablesStore={this.props.runnablesStore}
           scroller={this.props.scroller}
-          specPath={this.props.specPath}
+          spec={this.props.spec}
         />
         <ForcedGcWarning
           appState={appState}
@@ -109,9 +112,11 @@ declare global {
   }
 }
 
+// NOTE: this is for testing Cypress-in-Cypress
 if (window.Cypress) {
   window.state = appState
   window.render = (props) => {
+    // @ts-ignore
     render(<Reporter {...props as Required<ReporterProps>} />, document.getElementById('app'))
   }
 }

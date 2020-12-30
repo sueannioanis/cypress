@@ -89,34 +89,6 @@ describe('Proxy', () => {
     })
   })
 
-  // this will fail due to dynamic cert
-  // generation when strict ssl is true
-  it('can pass directly through', () => {
-    return request({
-      strictSSL: false,
-      url: 'https://localhost:8444/replace',
-      proxy: 'http://localhost:3333',
-    })
-    .then((html) => {
-      expect(html).to.include('https server')
-    })
-  })
-
-  it('retries 5 times', function () {
-    this.sandbox.spy(net, 'connect')
-
-    return request({
-      strictSSL: false,
-      url: 'https://localhost:12344',
-      proxy: 'http://localhost:3333',
-    })
-    .then(() => {
-      throw new Error('should not reach')
-    }).catch(() => {
-      expect(net.connect).to.have.callCount(5)
-    })
-  })
-
   it('closes outgoing connections when client disconnects', function () {
     this.sandbox.spy(net, 'connect')
 
@@ -130,12 +102,17 @@ describe('Proxy', () => {
       // ensure client has disconnected
       expect(res.socket.destroyed).to.be.true
       // ensure the outgoing socket created for this connection was destroyed
-      const socket = net.connect.getCalls()
-      .find((call) => {
-        return (call.args[0].port === '8444') && (call.args[0].host === 'localhost')
-      }).returnValue
+      expect(net.connect).calledOnce
 
-      expect(socket.destroyed).to.be.true
+      const socket = net.connect.getCalls()[0].returnValue
+
+      return new Promise((resolve) => {
+        socket.on('close', () => {
+          expect(socket.destroyed).to.be.true
+
+          resolve()
+        })
+      })
     })
   })
 
@@ -227,10 +204,16 @@ describe('Proxy', () => {
     })
   })
 
+  // TODO
   context('with an upstream proxy', () => {
     beforeEach(function () {
+      // PROXY vars should override npm_config vars, so set them to cause failures if they are used
+      // @see https://github.com/cypress-io/cypress/pull/8295
+      process.env.npm_config_proxy = process.env.npm_config_https_proxy = 'http://erroneously-used-npm-proxy.invalid'
+      process.env.npm_config_noproxy = 'just,some,nonsense'
+
       process.env.NO_PROXY = ''
-      process.env.HTTP_PROXY = (process.env.HTTPS_PROXY = 'http://localhost:9001')
+      process.env.HTTP_PROXY = process.env.HTTPS_PROXY = 'http://localhost:9001'
 
       this.upstream = new DebugProxy({
         keepRequests: true,
@@ -295,10 +278,8 @@ describe('Proxy', () => {
         expect(res.socket.destroyed).to.be.true
 
         // ensure the outgoing socket created for this connection was destroyed
-        const socket = net.connect.getCalls()
-        .find((call) => {
-          return (call.args[0].port === 9001) && (call.args[0].host === 'localhost')
-        }).returnValue
+        expect(net.connect).calledOnce
+        const socket = net.connect.getCalls()[0].returnValue
 
         return new Promise((resolve) => {
           return socket.on('close', () => {

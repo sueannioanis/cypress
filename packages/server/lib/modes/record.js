@@ -42,29 +42,11 @@ const runningInternalTests = () => {
   return env.get('CYPRESS_INTERNAL_E2E_TESTS') === '1'
 }
 
-const warnIfCiFlag = (ci) => {
-  // if we are using the ci flag that means
-  // we have an old version of the CLI tools installed
-  // and that we need to warn the user what to update
-  if (ci) {
-    const type = (() => {
-      if (env.get('CYPRESS_CI_KEY')) {
-        return 'CYPRESS_CI_DEPRECATED_ENV_VAR'
-      }
-
-      return 'CYPRESS_CI_DEPRECATED'
-    })()
-
-    return errors.warning(type)
-  }
-}
-
 const haveProjectIdAndKeyButNoRecordOption = (projectId, options) => {
-  // if we have a project id
-  // and we have a key
-  // and (record or ci) hasn't been set to true or false
+  // if we have a project id and we have a key
+  // and record hasn't been set to true or false
   return (projectId && options.key) && (
-    _.isUndefined(options.record) && _.isUndefined(options.ci)
+    _.isUndefined(options.record)
   )
 }
 
@@ -209,12 +191,11 @@ const updateInstanceStdout = (options = {}) => {
 }
 
 const updateInstance = (options = {}) => {
-  const { instanceId, results, captured, group, parallel, ciBuildId } = options
+  const { instanceId, results, group, parallel, ciBuildId } = options
   let { stats, tests, hooks, video, screenshots, reporterStats, error } = results
 
   video = Boolean(video)
   const cypressConfig = options.config
-  const stdout = captured.toString()
 
   // get rid of the path property
   screenshots = _.map(screenshots, (screenshot) => {
@@ -228,7 +209,6 @@ const updateInstance = (options = {}) => {
       error,
       video,
       hooks,
-      stdout,
       instanceId,
       screenshots,
       reporterStats,
@@ -309,7 +289,7 @@ const createRun = Promise.method((options = {}) => {
   let { projectId, recordKey, platform, git, specPattern, specs, parallel, ciBuildId, group, tags } = options
 
   if (recordKey == null) {
-    recordKey = env.get('CYPRESS_RECORD_KEY') || env.get('CYPRESS_CI_KEY')
+    recordKey = env.get('CYPRESS_RECORD_KEY')
   }
 
   if (!recordKey) {
@@ -386,13 +366,21 @@ const createRun = Promise.method((options = {}) => {
             gracePeriodMessage: gracePeriodMessage(warning.gracePeriodEnds),
             link: billingLink(warning.orgId),
           })
+        case 'FREE_PLAN_EXCEEDS_MONTHLY_TESTS_V2':
+          return errors.warning('PLAN_EXCEEDS_MONTHLY_TESTS', {
+            planType: 'free',
+            usedTestsMessage: usedTestsMessage(warning.limit, 'test'),
+            link: billingLink(warning.orgId),
+          })
         case 'PAID_PLAN_EXCEEDS_MONTHLY_PRIVATE_TESTS':
-          return errors.warning('PAID_PLAN_EXCEEDS_MONTHLY_PRIVATE_TESTS', {
+          return errors.warning('PLAN_EXCEEDS_MONTHLY_TESTS', {
+            planType: 'current',
             usedTestsMessage: usedTestsMessage(warning.limit, 'private test'),
             link: billingLink(warning.orgId),
           })
         case 'PAID_PLAN_EXCEEDS_MONTHLY_TESTS':
-          return errors.warning('PAID_PLAN_EXCEEDS_MONTHLY_TESTS', {
+          return errors.warning('PLAN_EXCEEDS_MONTHLY_TESTS', {
+            planType: 'current',
             usedTestsMessage: usedTestsMessage(warning.limit, 'test'),
             link: billingLink(warning.orgId),
           })
@@ -696,7 +684,6 @@ const createRunAndRecordSpecs = (options = {}) => {
           group,
           config,
           results,
-          captured,
           parallel,
           ciBuildId,
           instanceId,
@@ -747,8 +734,6 @@ module.exports = {
   updateInstanceStdout,
 
   uploadArtifacts,
-
-  warnIfCiFlag,
 
   throwIfNoProjectId,
 

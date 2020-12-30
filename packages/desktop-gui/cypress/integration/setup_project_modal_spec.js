@@ -1,4 +1,4 @@
-describe('Set Up Project', function () {
+describe('Connect to Dashboard', function () {
   beforeEach(function () {
     cy.fixture('user').as('user')
     cy.fixture('projects').as('projects')
@@ -46,8 +46,8 @@ describe('Set Up Project', function () {
     })
   })
 
-  it('displays \'need to set up\' message', () => {
-    cy.contains('You have no recorded runs')
+  it('displays "need to set up" message', () => {
+    cy.contains('You could see test recordings here')
   })
 
   describe('when there is a current user', function () {
@@ -59,11 +59,12 @@ describe('Set Up Project', function () {
       beforeEach(function () {
         this.getOrgs.resolve(this.orgs)
 
-        cy.get('.btn').contains('Set up project').click()
+        cy.get('.btn').contains('Connect to Dashboard').click()
       })
 
       it('clicking link opens setup project window', () => {
         cy.get('.modal').should('be.visible')
+        cy.percySnapshot()
       })
 
       it('submit button is disabled', () => {
@@ -90,7 +91,7 @@ describe('Set Up Project', function () {
 
     describe('loading behavior', function () {
       beforeEach(function () {
-        cy.get('.btn').contains('Set up project').click()
+        cy.get('.btn').contains('Connect to Dashboard').click()
       })
 
       it('calls getOrgs', function () {
@@ -111,7 +112,7 @@ describe('Set Up Project', function () {
         beforeEach(function () {
           this.getOrgs.resolve(this.orgs)
 
-          cy.get('.btn').contains('Set up project').click()
+          cy.get('.btn').contains('Connect to Dashboard').click()
           cy.get('.modal-content')
           cy.get('.organizations-select__dropdown-indicator').click()
           cy.get('.organizations-select__menu').should('be.visible')
@@ -135,17 +136,19 @@ describe('Set Up Project', function () {
       context('with orgs', function () {
         beforeEach(function () {
           this.getOrgs.resolve(this.orgs)
-          cy.get('.btn').contains('Set up project').click()
+          cy.get('.btn').contains('Connect to Dashboard').click()
 
           cy.get('.modal-content')
         })
 
         it('lists organizations to assign to project', function () {
-          cy.get('.empty-select-orgs').should('not.be.visible')
+          cy.get('.empty-select-orgs').should('not.exist')
           cy.get('.organizations-select__dropdown-indicator').click()
           cy.get('.organizations-select__menu').should('be.visible')
           cy.get('.organizations-select__option')
           .should('have.length', this.orgs.length)
+
+          cy.percySnapshot()
         })
 
         it('selects personal org by default', function () {
@@ -170,17 +173,19 @@ describe('Set Up Project', function () {
 
           cy.get('.privacy-radio').should('be.visible')
           .find('input').should('not.be.checked')
+
+          cy.percySnapshot()
         })
       })
 
       context('orgs with no default org', function () {
         beforeEach(function () {
           this.getOrgs.resolve(Cypress._.filter(this.orgs, { 'default': false }))
-          cy.get('.btn').contains('Set up project').click()
+          cy.get('.btn').contains('Connect to Dashboard').click()
         })
 
         it('lists organizations to assign to project', function () {
-          cy.get('.empty-select-orgs').should('not.be.visible')
+          cy.get('.empty-select-orgs').should('not.exist')
           cy.get('.organizations-select__dropdown-indicator').click()
           cy.get('.organizations-select__menu').should('be.visible')
           cy.get('.organizations-select__option')
@@ -212,13 +217,14 @@ describe('Set Up Project', function () {
       context('without orgs', function () {
         beforeEach(function () {
           this.getOrgs.resolve([])
-          cy.get('.btn').contains('Set up project').click()
+          cy.get('.btn').contains('Connect to Dashboard').click()
         })
 
         it('displays empty message', () => {
           cy.get('.empty-select-orgs').should('be.visible')
-          cy.get('.organizations-select').should('not.be.visible')
+          cy.get('.organizations-select').should('not.exist')
           cy.get('.privacy-radio').should('not.be.visible')
+          cy.percySnapshot()
         })
 
         it('opens dashboard organizations when \'create org\' is clicked', () => {
@@ -236,7 +242,7 @@ describe('Set Up Project', function () {
             'default': true,
           }])
 
-          cy.get('.btn').contains('Set up project').click()
+          cy.get('.btn').contains('Connect to Dashboard').click()
           cy.get('.modal-content')
         })
 
@@ -264,7 +270,7 @@ describe('Set Up Project', function () {
         beforeEach(function () {
           cy.clock()
           this.getOrgs.resolve(this.orgs)
-          cy.get('.btn').contains('Set up project').click()
+          cy.get('.btn').contains('Connect to Dashboard').click()
         })
 
         it('polls for orgs twice in 10+sec on click of org', function () {
@@ -308,7 +314,7 @@ describe('Set Up Project', function () {
     describe('on submit', function () {
       beforeEach(function () {
         this.getOrgs.resolve(this.orgs)
-        cy.contains('.btn', 'Set up project').click()
+        cy.contains('.btn', 'Connect to Dashboard').click()
         cy.get('.organizations-select__dropdown-indicator').click()
         cy.get('.organizations-select__menu').should('be.visible')
         cy.get('.organizations-select__option')
@@ -343,7 +349,7 @@ describe('Set Up Project', function () {
           orgId: '000',
         })
 
-        cy.contains('.btn', 'Set up project').click()
+        cy.contains('.btn', 'Connect to Dashboard').click()
       })
 
       it('sends project name, org id, and public flag to ipc event', function () {
@@ -430,7 +436,7 @@ describe('Set Up Project', function () {
         })
 
         it('closes modal', () => {
-          cy.get('.modal').should('not.be.visible')
+          cy.get('.modal').should('not.exist')
         })
 
         it('updates localStorage projects cache', () => {
@@ -450,7 +456,7 @@ describe('Set Up Project', function () {
     describe('errors', function () {
       beforeEach(function () {
         this.getOrgs.resolve(this.orgs)
-        cy.contains('.btn', 'Set up project').click()
+        cy.contains('.btn', 'Connect to Dashboard').click()
         cy.get('.organizations-select__dropdown-indicator').click()
         cy.get('.organizations-select__menu').should('be.visible')
         cy.get('.organizations-select__option')
@@ -471,21 +477,17 @@ describe('Set Up Project', function () {
       it('displays error name and message when unexpected', function () {
         this.setupDashboardProject.reject({
           name: 'Fatal Error!',
-          message: `\
-{
-  "system": "down",
-  "toxicity": "of the city"
-}\
-`,
+          message: `{ "system": "down", "toxicity": "of the city" }`,
         })
 
         cy.contains('"system": "down"')
+        cy.percySnapshot()
       })
     })
 
     describe('when get orgs 401s', function () {
       beforeEach(function () {
-        cy.contains('.btn', 'Set up project').click()
+        cy.contains('.btn', 'Connect to Dashboard').click()
         .then(() => {
           this.getOrgs.reject({ name: '', message: '', statusCode: 401 })
         })
@@ -501,7 +503,7 @@ describe('Set Up Project', function () {
     beforeEach(function () {
       this.getCurrentUser.resolve(null)
 
-      cy.get('.btn').contains('Set up project').click()
+      cy.get('.btn').contains('Connect to Dashboard').click()
     })
 
     it('shows login', () => {
@@ -511,7 +513,7 @@ describe('Set Up Project', function () {
     it('closes login modal', () => {
       cy.get('.modal').contains('Log In to Dashboard')
       cy.get('.close').click()
-      cy.get('.btn').contains('Set up project').click()
+      cy.get('.btn').contains('Connect to Dashboard').click()
     })
 
     describe('when login succeeds', function () {

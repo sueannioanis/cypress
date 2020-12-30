@@ -1,6 +1,6 @@
 Cypress.on('uncaught:exception', (error, runnable) => {
   error // $ExpectType Error
-  runnable // $ExpectType IRunnable
+  runnable // $ExpectType Runnable
 })
 
 Cypress.on('window:confirm', (text) => {
@@ -12,11 +12,11 @@ Cypress.on('window:alert', (text) => {
 })
 
 Cypress.on('window:before:load', (win) => {
-  win // $ExpectType Window
+  win // $ExpectType AUTWindow
 })
 
 Cypress.on('window:load', (win) => {
-  win // $ExpectType Window
+  win // $ExpectType AUTWindow
 })
 
 Cypress.on('window:before:unload', (event) => {
@@ -33,7 +33,7 @@ Cypress.on('url:changed', (url) => {
 
 Cypress.on('fail', (error, mocha) => {
   error // $ExpectType Error
-  mocha // $ExpectType IRunnable
+  mocha // $ExpectType Runnable
 })
 
 Cypress.on('viewport:changed', (viewport) => {
@@ -70,10 +70,19 @@ Cypress.on('log:changed', (log, interactive: boolean) => {
 
 Cypress.on('test:before:run', (attributes , test) => {
   attributes // $ExpectType ObjectLike
-  test // $ExpectType ITest
+  test // $ExpectType Test
 })
 
 Cypress.on('test:after:run', (attributes , test) => {
   attributes // $ExpectType ObjectLike
-  test // $ExpectType ITest
+  test // $ExpectType Test
 })
+
+namespace CypressActionCommandOptionTests {
+  cy.get('el').clear({scrollBehavior: 'top'})
+  cy.get('el').check({scrollBehavior: 'bottom'})
+  cy.get('el').type('hello', {scrollBehavior: 'center'})
+  cy.get('el').trigger('mousedown', {scrollBehavior: 'nearest'})
+  cy.get('el').click({scrollBehavior: false})
+  cy.get('el').click({scrollBehavior: true}) // $ExpectError
+}

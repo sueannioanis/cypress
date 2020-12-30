@@ -2,7 +2,7 @@ describe('Login', function () {
   beforeEach(function () {
     cy.fixture('user').as('user')
 
-    return cy.visitIndex().then(function (win) {
+    cy.visitIndex().then(function (win) {
       let start = win.App.start
 
       this.win = win
@@ -50,6 +50,8 @@ describe('Login', function () {
 
     it('has dashboard login button', function () {
       cy.get('.login').contains('button', 'Log In to Dashboard')
+
+      cy.percySnapshot()
     })
 
     it('opens dashboard on clicking \'Cypress Dashboard\'', () => {
@@ -63,80 +65,121 @@ describe('Login', function () {
         cy.get('.login').contains('button', 'Log In to Dashboard').as('loginBtn').click()
       })
 
-      it('triggers ipc \'begin:auth\' on click', function () {
+      it('triggers ipc "begin:auth" on click', function () {
         cy.then(function () {
           expect(this.ipc.beginAuth).to.be.calledOnce
         })
       })
 
-      it('disables login button', () => {
-        cy.get('@loginBtn').should('be.disabled')
+      it('passes utm code when it triggers ipc "begin:auth"', function () {
+        cy.then(function () {
+          expect(this.ipc.beginAuth).to.be.calledWith('Nav Login Button')
+        })
       })
 
-      it('shows spinner with Opening browser', () => {
-        cy.get('@loginBtn').invoke('text').should('contain', 'Opening browser...')
+      it('shows spinner with Opening browser and disables button', () => {
+        cy.get('@loginBtn').should('be.disabled')
+        .invoke('text').should('contain', 'Opening browser...')
+
+        cy.percySnapshot()
       })
 
       context('on begin:auth', function () {
-        beforeEach(function () {
-          cy.get('@loginBtn')
-        })
+        it('when browser opened, shows spinner with Waiting...', function () {
+          this.onAuthMessageCb(null, {
+            name: '',
+            message: '',
+            stack: '',
+            browserOpened: true,
+          })
 
-        it('displays spinner with Opening browser... and disables button', function () {
-          cy.contains('Opening browser...').should('be.disabled')
+          cy.get('@loginBtn').should('be.disabled')
+          .invoke('text').should('contain', 'Waiting for browser login...')
+
+          cy.percySnapshot()
         })
 
         describe('on ipc begin:auth success', function () {
-          beforeEach(function () {
-            this.beginAuth.resolve(this.user)
-          })
-
-          it('goes to previous view', () => {
-            cy.shouldBeOnIntro()
-          })
-
-          it('displays username in UI', function () {
-            cy.get('.user-dropdown .dropdown-chosen').should('contain', this.user.name)
-          })
-
-          it('displays username in success dialog', () => {
-            cy.get('.modal').contains('Jane Lane')
-          })
-
-          it('can close modal by clicking Continue', () => {
-            cy.get('.modal .btn:contains(Continue)').click()
-            cy.get('.modal').should('not.be.visible')
-          })
-
-          context('after clicking Continue', function () {
+          context('when user name is not defined', () => {
             beforeEach(function () {
-              cy.get('.modal .btn:contains(Continue)').click()
+              this.user.name = ''
+              this.beginAuth.resolve(this.user)
             })
 
-            context('log out', function () {
-              it('displays login button on logout', () => {
-                cy.get('.user-dropdown .dropdown-chosen').contains('Jane').click()
+            it('displays user email in UI', function () {
+              cy.get('.user-dropdown .dropdown-chosen').should('contain', this.user.email)
+            })
 
-                cy.contains('Log Out').click()
-                cy.get('.nav').contains('Log In')
+            it('displays user email in success dialog', function () {
+              cy.get('.modal').contains(this.user.email)
+
+              cy.percySnapshot()
+            })
+
+            it('displays message with link to complete onboarding steps', () => {
+              cy.get('.modal').contains('complete the onboarding steps')
+
+              cy.contains('a', 'Cypress Dashboard')
+              .click().then(function () {
+                expect(this.ipc.externalOpen).to.be.calledWith('https://on.cypress.io/dashboard/profile')
+              })
+            })
+          })
+
+          context('when user name is defined', () => {
+            beforeEach(function () {
+              this.beginAuth.resolve(this.user)
+            })
+
+            it('goes to previous view', () => {
+              cy.shouldBeOnIntro()
+            })
+
+            it('displays username in UI', function () {
+              cy.get('.user-dropdown .dropdown-chosen').should('contain', this.user.name)
+            })
+
+            it('displays username in success dialog', () => {
+              cy.get('.modal').contains('Jane Lane')
+
+              cy.percySnapshot()
+            })
+
+            it('can close modal by clicking Continue', () => {
+              cy.get('.modal .btn:contains(Continue)').click()
+              cy.get('.modal').should('not.be.visible')
+            })
+
+            context('after clicking Continue', function () {
+              beforeEach(function () {
+                cy.get('.modal .btn:contains(Continue)').click()
               })
 
-              it('calls log:out', function () {
-                cy.get('.user-dropdown .dropdown-chosen').contains('Jane').click()
+              context('log out', function () {
+                it('displays login button on logout', () => {
+                  cy.get('.user-dropdown .dropdown-chosen').contains('Jane').click()
 
-                cy.contains('Log Out').click().then(function () {
-                  expect(this.ipc.logOut).to.be.called
+                  cy.contains('Log Out').click()
+                  cy.get('.nav').contains('Log In')
                 })
-              })
 
-              it('has login button enabled when returning to login after logout', function () {
-                cy.get('.user-dropdown .dropdown-chosen').contains('Jane').click()
-                cy.contains('Log Out').click()
-                cy.contains('Log In').click()
+                it('calls log:out', function () {
+                  cy.get('.user-dropdown .dropdown-chosen').contains('Jane').click()
 
-                cy.get('.login button').eq(1)
-                .should('not.be.disabled').invoke('text')
-                .should('include', 'Log In to Dashboard')
+                  cy.contains('Log Out').click().then(function () {
+                    expect(this.ipc.logOut).to.be.called
+                  })
+                })
+
+                it('has login button enabled when returning to login after logout', function () {
+                  cy.get('.user-dropdown .dropdown-chosen').contains('Jane').click()
+                  cy.contains('Log Out').click()
+                  cy.contains('Log In').click()
+
+                  cy.get('.login button').eq(1)
+                  .should('not.be.disabled').invoke('text')
+                  .should('include', 'Log In to Dashboard')
+                })
               })
             })
           })
@@ -153,6 +196,8 @@ describe('Login', function () {
           it('displays error in ui', () => {
             cy.get('.alert-danger').should('be.visible')
             .contains('There\'s an error')
+
+            cy.percySnapshot()
           })
 
           it('login button should be enabled', () => {
@@ -171,6 +216,8 @@ describe('Login', function () {
           it('displays warning in ui', () => {
             cy.get('.warning').should('be.visible')
             .contains('some warning here')
+
+            cy.percySnapshot()
           })
 
           it('login button should be disabled', () => {
@@ -187,6 +234,8 @@ describe('Login', function () {
             cy.get('.login-content .btn-login')
             .should('be.disabled')
             .should('have.text', ' Could not open browser.')
+
+            cy.percySnapshot()
           })
 
           it('<pre> can be click-selected', function () {
@@ -246,6 +295,8 @@ describe('Login', function () {
       cy.contains('http://api.server')
 
       cy.contains('ECONNREFUSED')
+
+      cy.percySnapshot()
     })
 
     describe('trying again', function () {
@@ -280,7 +331,7 @@ describe('Login', function () {
 
     describe('api help link', () => {
       it('goes to external api help link', () => {
-        cy.contains('Learn more').click().then(function () {
+        cy.get('.login').contains('Learn more').click().then(function () {
           expect(this.ipc.externalOpen).to.be.calledWith('https://on.cypress.io/help-connect-to-api')
         })
       })

@@ -51,7 +51,10 @@ interface StringValues {
   ```
 */
 const _summaries: StringValues = {
-  experimentalGetCookiesSameSite: 'Adds `sameSite` values to the objects yielded from `cy.setCookie()`, `cy.getCookie()`, and `cy.getCookies()`. This will become the default behavior in Cypress 5.0.',
+  experimentalComponentTesting: 'Framework-specific component testing, uses `componentFolder` to load component specs.',
+  experimentalFetchPolyfill: 'Polyfills `window.fetch` to enable Network spying and stubbing.',
+  experimentalRunEvents: 'Allows listening to the `before:run`, `after:run`, `before:spec`, and `after:spec` events in the plugins file.',
+  experimentalSourceRewriting: 'Enables AST-based JS/HTML rewriting. This may fix issues caused by the existing regex-based JS/HTML replacement algorithm.',
 }
 
 /**
@@ -65,7 +68,10 @@ const _summaries: StringValues = {
   ```
 */
 const _names: StringValues = {
-  experimentalGetCookiesSameSite: 'Set `sameSite` property when retrieving cookies',
+  experimentalComponentTesting: 'Component Testing',
+  experimentalFetchPolyfill: 'Fetch polyfill',
+  experimentalRunEvents: 'Run Events',
+  experimentalSourceRewriting: 'Improved source rewriting',
 }
 
 /**
@@ -132,4 +138,10 @@ export const getExperiments = (project: CypressProject, names = experimental.nam
 // @ts-ignore
 export const isKnownExperiment = (experiment, key) => {
   return Object.keys(experimental.names).includes(key)
+}
+
+// exporting a single default object with methods
+// helps make it is to stub and to test
+export default {
+  getExperiments,
 }
