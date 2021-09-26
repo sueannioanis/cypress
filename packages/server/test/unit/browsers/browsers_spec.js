@@ -8,6 +8,17 @@ const normalizeBrowsers = (message) => {
   return message.replace(/(found are: ).*/, '$1chrome, firefox, electron')
 }
 
+// When we added component testing mode, we added the option for electron to be omitted
+const originalElectronVersion = process.versions.electron
+
+before(() => {
+  process.versions.electron = true
+})
+
+after(() => {
+  process.versions.electron = originalElectronVersion
+})
+
 describe('lib/browsers/index', () => {
   context('.getBrowserInstance', () => {
     it('returns instance', () => {
@@ -115,6 +126,24 @@ describe('lib/browsers/index', () => {
       expect(onWarning).to.be.calledOnce
 
       expect(onWarning).to.be.calledWithMatch({ type: 'DEPRECATED_BEFORE_BROWSER_LAUNCH_ARGS' })
+    })
+  })
+
+  context('.getMajorVersion', () => {
+    it('returns first number when string of numbers', () => {
+      expect(utils.getMajorVersion('91.0.4472.106')).to.eq(91) // Chromium format
+      expect(utils.getMajorVersion('91.0a1')).to.eq(91) // Firefox format
+    })
+
+    it('is empty string when empty string', () => {
+      expect(utils.getMajorVersion('')).to.eq('') // fallback if no version
+    })
+
+    // https://github.com/cypress-io/cypress/issues/15485
+    it('returns version when unconventional version format', () => {
+      const vers = 'VMware Fusion 12.1.0'
+
+      expect(utils.getMajorVersion(vers)).to.eq(vers)
     })
   })
 })

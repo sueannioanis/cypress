@@ -1,7 +1,7 @@
 const helpers = require('../support/helpers')
 
 const { shouldHaveTestResults, getRunState, cleanseRunStateMap } = helpers
-const { runIsolatedCypress, snapshotMochaEvents, getAutCypress } = helpers.createCypress({ config: { retries: 2, isTextTerminal: true, firefoxGcInterval: null } })
+const { runIsolatedCypress, snapshotMochaEvents, getAutCypress } = helpers.createCypress({ config: { retries: 2, isTextTerminal: true } })
 const { sinon } = Cypress
 const match = Cypress.sinon.match
 
@@ -18,7 +18,7 @@ const threeTestsWithRetry = {
   },
 }
 
-describe('src/cypress/runner retries mochaEvents', () => {
+describe('src/cypress/runner retries mochaEvents', { retries: 0 }, () => {
   // NOTE: for test-retries
   it('can set retry config', () => {
     runIsolatedCypress({}, { config: { retries: 1 } })

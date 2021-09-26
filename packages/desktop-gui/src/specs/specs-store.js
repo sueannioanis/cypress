@@ -7,6 +7,9 @@ import Spec from './spec-model'
 import Folder from './folder-model'
 
 const pathSeparatorRe = /[\\\/]/g
+// unicode-matching syntax: https://javascript.info/regexp-unicode
+const notUnicodeLettersOrNumbersRe = /[^\p{L}\p{N}]/gu
+const cypressRe = /.*cypress/
 
 export const allIntegrationSpecsSpec = new Spec({
   name: 'All Integration Specs',
@@ -35,15 +38,21 @@ const pathsEqual = (path1, path2) => {
 }
 
 /**
- * Filters give file objects by spec name substring
+ * Filters file objects by spec name substring
+ * - case-insensitive
+ * - ignores non-alphanumeric characters (e.g. "userspec" matches for "user_spec")
 */
 const filterSpecs = (filter, files) => {
   if (!filter) {
     return files
   }
 
+  const normalize = (name) => {
+    return name.toLowerCase().replace(notUnicodeLettersOrNumbersRe, '')
+  }
+
   const filteredFiles = _.filter(files, (spec) => {
-    return spec.name.toLowerCase().includes(filter.toLowerCase())
+    return normalize(spec.name).includes(normalize(filter))
   })
 
   return filteredFiles
@@ -61,6 +70,8 @@ export class SpecsStore {
   @observable isLoading = false
   @observable filter
   @observable selectedSpec
+  @observable newSpecAbsolutePath
+  @observable showNewSpecWarning = false
 
   @computed get specs () {
     return this._tree(this._files)
@@ -76,6 +87,10 @@ export class SpecsStore {
         return _.extend({}, spec, { specType: type })
       })
     }))
+
+    if (this.newSpecAbsolutePath && !_.find(this._files, this.isNew)) {
+      this.showNewSpecWarning = true
+    }
 
     this.isLoading = false
   }
@@ -102,6 +117,15 @@ export class SpecsStore {
         this.chosenSpecPath = null
       }
     }
+  }
+
+  @action setNewSpecPath (absolutePath) {
+    this.newSpecAbsolutePath = absolutePath
+    this.dismissNewSpecWarning()
+  }
+
+  @action dismissNewSpecWarning = () => {
+    this.showNewSpecWarning = false
   }
 
   @action setExpandSpecFolder (spec, isExpanded) {
@@ -144,8 +168,12 @@ export class SpecsStore {
     return pathsEqual(this.chosenSpecPath, formRelativePath(spec))
   }
 
+  isNew = (spec) => {
+    return pathsEqual(this.newSpecAbsolutePath, spec.absolute)
+  }
+
   getSpecsFilterId ({ id, path = '' }) {
-    const shortenedPath = path.replace(/.*cypress/, 'cypress')
+    const shortenedPath = path.replace(cypressRe, 'cypress')
 
     return `specsFilter-${id || '<no-id>'}-${shortenedPath}`
   }

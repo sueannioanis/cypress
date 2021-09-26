@@ -2,10 +2,14 @@ const os = require('os')
 const Promise = require('bluebird')
 const Xvfb = require('@cypress/xvfb')
 const { stripIndent } = require('common-tags')
-const debug = require('debug')('cypress:cli')
-const debugXvfb = require('debug')('cypress:xvfb')
+const Debug = require('debug')
 const { throwFormErrorText, errors } = require('../errors')
 const util = require('../util')
+
+const debug = Debug('cypress:cli')
+const debugXvfb = Debug('cypress:xvfb')
+
+debug.Debug = debugXvfb.Debug = Debug
 
 const xvfbOptions = {
   timeout: 30000, // milliseconds
@@ -54,6 +58,12 @@ module.exports = {
   },
 
   isNeeded () {
+    if (process.env.ELECTRON_RUN_AS_NODE) {
+      debug('Environment variable ELECTRON_RUN_AS_NODE detected, xvfb is not needed')
+
+      return false // xvfb required for electron processes only.
+    }
+
     if (os.platform() !== 'linux') {
       return false
     }

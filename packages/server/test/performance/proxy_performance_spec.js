@@ -12,12 +12,15 @@ const HarCapturer = require('chrome-har-capturer')
 const performance = require('../support/helpers/performance')
 const Promise = require('bluebird')
 const sanitizeFilename = require('sanitize-filename')
+const { createRoutes } = require(`${root}lib/routes`)
+const { SpecsStore } = require(`${root}/lib/specs-store`)
 
 process.env.CYPRESS_INTERNAL_ENV = 'development'
 
 const CA = require('@packages/https-proxy').CA
 const Config = require('../../lib/config')
-const Server = require('../../lib/server')
+const { ServerE2E } = require('../../lib/server-e2e')
+const { SocketE2E } = require('../../lib/socket-e2e')
 const { _getArgs } = require('../../lib/browsers/chrome')
 
 const CHROME_PATH = 'google-chrome'
@@ -348,9 +351,14 @@ describe('Proxy Performance', function () {
           // turn off morgan
           config.morgan = false
 
-          cyServer = new Server()
+          cyServer = new ServerE2E()
 
-          return cyServer.open(config)
+          return cyServer.open(config, {
+            SocketCtor: SocketE2E,
+            createRoutes,
+            specsStore: new SpecsStore({}, 'e2e'),
+            testingType: 'e2e',
+          })
         }),
       )
     })

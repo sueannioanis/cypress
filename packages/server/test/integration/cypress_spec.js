@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-properties */
 require('../spec_helper')
 
 const R = require('ramda')
@@ -13,15 +14,16 @@ const snapshot = require('snap-shot-it')
 const stripAnsi = require('strip-ansi')
 const debug = require('debug')('test')
 const pkg = require('@packages/root')
-const launcher = require('@packages/launcher')
+const detect = require('@packages/launcher/lib/detect')
+const launch = require('@packages/launcher/lib/browsers')
 const extension = require('@packages/extension')
 const argsUtil = require(`${root}lib/util/args`)
-const fs = require(`${root}lib/util/fs`)
+const { fs } = require(`${root}lib/util/fs`)
 const ciProvider = require(`${root}lib/util/ci_provider`)
 const settings = require(`${root}lib/util/settings`)
 const Events = require(`${root}lib/gui/events`)
 const Windows = require(`${root}lib/gui/windows`)
-const interactiveMode = require(`${root}lib/modes/interactive`)
+const interactiveMode = require(`${root}lib/modes/interactive-e2e`)
 const runMode = require(`${root}lib/modes/run`)
 const api = require(`${root}lib/api`)
 const cwd = require(`${root}lib/cwd`)
@@ -31,15 +33,16 @@ const cache = require(`${root}lib/cache`)
 const errors = require(`${root}lib/errors`)
 const plugins = require(`${root}lib/plugins`)
 const cypress = require(`${root}lib/cypress`)
-const Project = require(`${root}lib/project`)
-const Server = require(`${root}lib/server`)
+const ProjectBase = require(`${root}lib/project-base`).ProjectBase
+const { getId } = require(`${root}lib/project_static`)
+const { ServerE2E } = require(`${root}lib/server-e2e`)
 const Reporter = require(`${root}lib/reporter`)
 const Watchers = require(`${root}lib/watchers`)
 const browsers = require(`${root}lib/browsers`)
 const videoCapture = require(`${root}lib/video_capture`)
 const browserUtils = require(`${root}lib/browsers/utils`)
 const chromeBrowser = require(`${root}lib/browsers/chrome`)
-const openProject = require(`${root}lib/open_project`)
+const { openProject } = require(`${root}lib/open_project`)
 const env = require(`${root}lib/util/env`)
 const v = require(`${root}lib/util/validation`)
 const system = require(`${root}lib/util/system`)
@@ -124,9 +127,9 @@ describe('lib/cypress', () => {
     sinon.stub(plugins, 'init').resolves(undefined)
     sinon.stub(electronApp, 'isRunning').returns(true)
     sinon.stub(extension, 'setHostAndPath').resolves()
-    sinon.stub(launcher, 'detect').resolves(TYPICAL_BROWSERS)
+    sinon.stub(detect, 'detect').resolves(TYPICAL_BROWSERS)
     sinon.stub(process, 'exit')
-    sinon.stub(Server.prototype, 'reset')
+    sinon.stub(ServerE2E.prototype, 'reset')
     sinon.stub(errors, 'warning')
     .callThrough()
     .withArgs('INVOKED_BINARY_OUTSIDE_NPM_MODULE')
@@ -137,7 +140,10 @@ describe('lib/cypress', () => {
     sinon.spy(console, 'log')
 
     // to make sure our Electron browser mock object passes validation during tests
-    process.versions.chrome = ELECTRON_BROWSER.version
+    sinon.stub(process, 'versions').value({
+      chrome: ELECTRON_BROWSER.version,
+      electron: '123.45.6789',
+    })
 
     this.expectExitWith = (code) => {
       expect(process.exit).to.be.calledWith(code)
@@ -162,12 +168,16 @@ describe('lib/cypress', () => {
     }
   })
 
-  afterEach(() => {
-    Fixtures.remove()
+  afterEach(async () => {
+    try {
+      // make sure every project
+      // we spawn is closed down
+      await openProject.close()
+    } catch (e) {
+      // ...
+    }
 
-    // make sure every project
-    // we spawn is closed down
-    return openProject.close()
+    Fixtures.remove()
   })
 
   context('test browsers', () => {
@@ -272,146 +282,6 @@ describe('lib/cypress', () => {
     })
   })
 
-  context('--get-key', () => {
-    it('writes out key and exits on success', function () {
-      return Promise.all([
-        user.set({ name: 'brian', authToken: 'auth-token-123' }),
-
-        Project.id(this.todosPath)
-        .then((id) => {
-          this.projectId = id
-        }),
-      ])
-      .then(() => {
-        sinon.stub(api, 'getProjectToken')
-        .withArgs(this.projectId, 'auth-token-123')
-        .resolves('new-key-123')
-
-        return cypress.start(['--get-key', `--project=${this.todosPath}`])
-      }).then(() => {
-        expect(console.log).to.be.calledWith('new-key-123')
-        this.expectExitWith(0)
-      })
-    })
-
-    it('logs error and exits when user isn\'t logged in', function () {
-      return user.set({})
-      .then(() => {
-        return cypress.start(['--get-key', `--project=${this.todosPath}`])
-      }).then(() => {
-        this.expectExitWithErr('NOT_LOGGED_IN')
-      })
-    })
-
-    it('logs error and exits when project does not have an id', function () {
-      return user.set({ authToken: 'auth-token-123' })
-      .then(() => {
-        return cypress.start(['--get-key', `--project=${this.pristinePath}`])
-      }).then(() => {
-        this.expectExitWithErr('NO_PROJECT_ID', this.pristinePath)
-      })
-    })
-
-    it('logs error and exits when project could not be found at the path', function () {
-      return user.set({ authToken: 'auth-token-123' })
-      .then(() => {
-        return cypress.start(['--get-key', '--project=path/to/no/project'])
-      }).then(() => {
-        this.expectExitWithErr('NO_PROJECT_FOUND_AT_PROJECT_ROOT', 'path/to/no/project')
-      })
-    })
-
-    it('logs error and exits when project token cannot be fetched', function () {
-      return Promise.all([
-        user.set({ authToken: 'auth-token-123' }),
-
-        Project.id(this.todosPath)
-        .then((id) => {
-          this.projectId = id
-        }),
-      ])
-      .then(() => {
-        sinon.stub(api, 'getProjectToken')
-        .withArgs(this.projectId, 'auth-token-123')
-        .rejects(new Error())
-
-        return cypress.start(['--get-key', `--project=${this.todosPath}`])
-      }).then(() => {
-        this.expectExitWithErr('CANNOT_FETCH_PROJECT_TOKEN')
-      })
-    })
-  })
-
-  context('--new-key', () => {
-    it('writes out key and exits on success', function () {
-      return Promise.all([
-        user.set({ name: 'brian', authToken: 'auth-token-123' }),
-
-        Project.id(this.todosPath)
-        .then((id) => {
-          this.projectId = id
-        }),
-      ])
-      .then(() => {
-        sinon.stub(api, 'updateProjectToken')
-        .withArgs(this.projectId, 'auth-token-123')
-        .resolves('new-key-123')
-
-        return cypress.start(['--new-key', `--project=${this.todosPath}`])
-      }).then(() => {
-        expect(console.log).to.be.calledWith('new-key-123')
-        this.expectExitWith(0)
-      })
-    })
-
-    it('logs error and exits when user isn\'t logged in', function () {
-      return user.set({})
-      .then(() => {
-        return cypress.start(['--new-key', `--project=${this.todosPath}`])
-      }).then(() => {
-        this.expectExitWithErr('NOT_LOGGED_IN')
-      })
-    })
-
-    it('logs error and exits when project does not have an id', function () {
-      return user.set({ authToken: 'auth-token-123' })
-      .then(() => {
-        return cypress.start(['--new-key', `--project=${this.pristinePath}`])
-      }).then(() => {
-        this.expectExitWithErr('NO_PROJECT_ID', this.pristinePath)
-      })
-    })
-
-    it('logs error and exits when project could not be found at the path', function () {
-      return user.set({ authToken: 'auth-token-123' })
-      .then(() => {
-        return cypress.start(['--new-key', '--project=path/to/no/project'])
-      }).then(() => {
-        this.expectExitWithErr('NO_PROJECT_FOUND_AT_PROJECT_ROOT', 'path/to/no/project')
-      })
-    })
-
-    it('logs error and exits when project token cannot be fetched', function () {
-      return Promise.all([
-        user.set({ authToken: 'auth-token-123' }),
-
-        Project.id(this.todosPath)
-        .then((id) => {
-          this.projectId = id
-        }),
-      ])
-      .then(() => {
-        sinon.stub(api, 'updateProjectToken')
-        .withArgs(this.projectId, 'auth-token-123')
-        .rejects(new Error())
-
-        return cypress.start(['--new-key', `--project=${this.todosPath}`])
-      }).then(() => {
-        this.expectExitWithErr('CANNOT_CREATE_PROJECT_TOKEN')
-      })
-    })
-  })
-
   context('--run-project', () => {
     beforeEach(() => {
       sinon.stub(electron.app, 'on').withArgs('ready').yieldsAsync()
@@ -499,7 +369,7 @@ describe('lib/cypress', () => {
       }).then(() => {
         expect(api.createProject).not.to.be.called
 
-        return (new Project(this.noScaffolding)).getProjectId()
+        return (new ProjectBase({ projectRoot: this.noScaffolding, testingType: 'e2e' })).getProjectId()
         .then(() => {
           throw new Error('should have caught error but did not')
         }).catch((err) => {
@@ -597,9 +467,10 @@ describe('lib/cypress', () => {
           return fs.statAsync(cfg.integrationFolder)
         }).then(() => {
           return Promise.join(
-            fs.statAsync(path.join(cfg.integrationFolder, 'examples', 'actions.spec.js')),
-            fs.statAsync(path.join(cfg.integrationFolder, 'examples', 'files.spec.js')),
-            fs.statAsync(path.join(cfg.integrationFolder, 'examples', 'viewport.spec.js')),
+            fs.statAsync(path.join(cfg.integrationFolder, '1-getting-started', 'todo.spec.js')),
+            fs.statAsync(path.join(cfg.integrationFolder, '2-advanced-examples', 'actions.spec.js')),
+            fs.statAsync(path.join(cfg.integrationFolder, '2-advanced-examples', 'files.spec.js')),
+            fs.statAsync(path.join(cfg.integrationFolder, '2-advanced-examples', 'viewport.spec.js')),
           )
         })
       })
@@ -640,7 +511,11 @@ describe('lib/cypress', () => {
         return fs.statAsync(path.join(this.pristinePath, 'cypress', 'integration'))
       }).then(() => {
         throw new Error('integration folder should not exist!')
-      }).catch({ code: 'ENOENT' }, () => {})
+      }).catch((err) => {
+        if (err.code !== 'ENOENT') {
+          throw err
+        }
+      })
     })
 
     it('scaffolds out fixtures + files if they do not exist', function () {
@@ -854,32 +729,40 @@ describe('lib/cypress', () => {
       })
     })
 
-    it('logs error and exits when spec file was specified and does not exist', function () {
-      return cypress.start([`--run-project=${this.todosPath}`, '--spec=path/to/spec'])
-      .then(() => {
-        this.expectExitWithErr('NO_SPECS_FOUND', 'path/to/spec')
-        this.expectExitWithErr('NO_SPECS_FOUND', 'We searched for any files matching this glob pattern:')
+    describe('no specs found', function () {
+      it('logs error and exits when spec file was specified and does not exist', function () {
+        return cypress.start([`--run-project=${this.todosPath}`, '--spec=path/to/spec'])
+        .then(() => {
+          // includes the search spec
+          this.expectExitWithErr('NO_SPECS_FOUND', 'path/to/spec')
+          this.expectExitWithErr('NO_SPECS_FOUND', 'We searched for any files matching this glob pattern:')
+          // includes the project path
+          this.expectExitWithErr('NO_SPECS_FOUND', this.todosPath)
+        })
       })
-    })
 
-    it('logs error and exits when spec absolute file was specified and does not exist', function () {
-      return cypress.start([
-        `--run-project=${this.todosPath}`,
-        `--spec=${this.todosPath}/tests/path/to/spec`,
-      ])
-      .then(() => {
-        this.expectExitWithErr('NO_SPECS_FOUND', 'tests/path/to/spec')
+      it('logs error and exits when spec absolute file was specified and does not exist', function () {
+        return cypress.start([
+          `--run-project=${this.todosPath}`,
+          `--spec=${this.todosPath}/tests/path/to/spec`,
+        ])
+        .then(() => {
+          // includes path to the spec
+          this.expectExitWithErr('NO_SPECS_FOUND', 'tests/path/to/spec')
+          // includes folder name
+          this.expectExitWithErr('NO_SPECS_FOUND', this.todosPath)
+        })
       })
-    })
 
-    it('logs error and exits when no specs were found at all', function () {
-      return cypress.start([
-        `--run-project=${this.todosPath}`,
-        '--config=integrationFolder=cypress/specs',
-      ])
-      .then(() => {
-        this.expectExitWithErr('NO_SPECS_FOUND', 'We searched for any files inside of this folder:')
-        this.expectExitWithErr('NO_SPECS_FOUND', 'cypress/specs')
+      it('logs error and exits when no specs were found at all', function () {
+        return cypress.start([
+          `--run-project=${this.todosPath}`,
+          '--config=integrationFolder=cypress/specs',
+        ])
+        .then(() => {
+          this.expectExitWithErr('NO_SPECS_FOUND', 'We searched for any files inside of this folder:')
+          this.expectExitWithErr('NO_SPECS_FOUND', 'cypress/specs')
+        })
       })
     })
 
@@ -1126,10 +1009,15 @@ describe('lib/cypress', () => {
             clearCache: sinon.stub().resolves(),
             setProxy: sinon.stub().resolves(),
             setUserAgent: sinon.stub(),
+            on: sinon.stub(),
+            removeListener: sinon.stub(),
           },
         }
 
-        sinon.stub(browserUtils, 'launch').resolves(ee)
+        ee.maximize = sinon.stub
+        ee.setSize = sinon.stub
+
+        sinon.stub(launch, 'launch').resolves(ee)
         sinon.stub(Windows, 'create').returns(ee)
       })
 
@@ -1140,13 +1028,18 @@ describe('lib/cypress', () => {
           const criClient = {
             ensureMinimumProtocolVersion: sinon.stub().resolves(),
             close: sinon.stub().resolves(),
+            on: sinon.stub(),
+            send: sinon.stub(),
           }
+
+          sinon.stub(chromeBrowser, '_writeExtension').resolves()
 
           sinon.stub(chromeBrowser, '_connectToChromeRemoteInterface').resolves(criClient)
           // the "returns(resolves)" stub is due to curried method
           // it accepts URL to visit and then waits for actual CRI client reference
           // and only then navigates to that URL
           sinon.stub(chromeBrowser, '_navigateUsingCRI').resolves()
+          sinon.stub(chromeBrowser, '_handleDownloads').resolves()
 
           sinon.stub(chromeBrowser, '_setAutomation').returns()
 
@@ -1155,13 +1048,13 @@ describe('lib/cypress', () => {
             '--browser=chrome',
           ])
           .then(() => {
-            const { args } = browserUtils.launch.firstCall
+            const { args } = launch.launch.firstCall
 
             // when we work with the browsers we set a few extra flags
             const chrome = _.find(TYPICAL_BROWSERS, { name: 'chrome' })
             const launchedChrome = R.merge(chrome, {
-              isHeadless: false,
-              isHeaded: true,
+              isHeadless: true,
+              isHeaded: false,
             })
 
             expect(args[0], 'found and used Chrome').to.deep.eq(launchedChrome)
@@ -1211,7 +1104,7 @@ describe('lib/cypress', () => {
 
       it('can change the default port to 5544', function () {
         const listen = sinon.spy(http.Server.prototype, 'listen')
-        const open = sinon.spy(Server.prototype, 'open')
+        const open = sinon.spy(ServerE2E.prototype, 'open')
 
         return cypress.start([`--run-project=${this.todosPath}`, '--port=5544'])
         .then(() => {
@@ -1223,7 +1116,8 @@ describe('lib/cypress', () => {
       })
 
       // TODO: handle PORT_IN_USE short integration test
-      it('logs error and exits when port is in use', function () {
+      it('logs error and exits when port is in use', async function () {
+        sinon.stub(ProjectBase.prototype, 'getAutomation').returns({ use: () => {} })
         let server = http.createServer()
 
         server = Promise.promisifyAll(server)
@@ -1232,7 +1126,7 @@ describe('lib/cypress', () => {
         .then(() => {
           return cypress.start([`--run-project=${this.todosPath}`, '--port=5544'])
         }).then(() => {
-          this.expectExitWithErr('PORT_IN_USE_LONG', '5544')
+          this.expectExitWithErr('PORT_IN_USE_SHORT', '5544')
         })
       })
     })
@@ -1348,7 +1242,7 @@ describe('lib/cypress', () => {
         // make sure we have no user object
         user.set({}),
 
-        Project.id(this.todosPath)
+        getId(this.todosPath)
         .then((id) => {
           this.projectId = id
         }),
@@ -1756,7 +1650,7 @@ describe('lib/cypress', () => {
 
       sinon.stub(electron.app, 'on').withArgs('ready').yieldsAsync()
       sinon.stub(Windows, 'open').resolves(this.win)
-      sinon.stub(Server.prototype, 'startWebsockets')
+      sinon.stub(ServerE2E.prototype, 'startWebsockets')
       sinon.spy(Events, 'start')
       sinon.stub(electron.ipcMain, 'on')
     })
@@ -1789,8 +1683,7 @@ describe('lib/cypress', () => {
     })
 
     it('passes filtered options to Project#open and sets cli config', function () {
-      const getConfig = sinon.spy(Project.prototype, 'getConfig')
-      const open = sinon.stub(Server.prototype, 'open').resolves([])
+      const open = sinon.stub(ServerE2E.prototype, 'open').resolves([])
 
       process.env.CYPRESS_FILE_SERVER_FOLDER = 'foo'
       process.env.CYPRESS_BASE_URL = 'http://localhost'
@@ -1819,12 +1712,12 @@ describe('lib/cypress', () => {
 
         return Events.handleEvent(options, {}, {}, 123, 'open:project', this.todosPath)
       }).then(() => {
-        expect(getConfig).to.be.calledWithMatch({
-          port: 2121,
-          pageLoadTimeout: 1000,
-          report: false,
-          env: { baz: 'baz' },
-        })
+        const projectOptions = openProject.getProject().options
+
+        expect(projectOptions.port).to.eq(2121)
+        expect(projectOptions.pageLoadTimeout).to.eq(1000)
+        expect(projectOptions.report).to.eq(false)
+        expect(projectOptions.env).to.eql({ baz: 'baz' })
 
         expect(open).to.be.called
 
@@ -1885,7 +1778,7 @@ describe('lib/cypress', () => {
       const event = { sender: { send: sinon.stub() } }
       const warning = { message: 'Blah blah baseUrl blah blah' }
 
-      sinon.stub(Server.prototype, 'open').resolves([2121, warning])
+      sinon.stub(ServerE2E.prototype, 'open').resolves([2121, warning])
 
       return cypress.start(['--port=2121', '--config', 'pageLoadTimeout=1000', '--foo=bar', '--env=baz=baz'])
       .then(() => {
@@ -1902,33 +1795,30 @@ describe('lib/cypress', () => {
     describe('--config-file', () => {
       beforeEach(function () {
         this.filename = 'foo.bar.baz.asdf.quux.json'
-        this.open = sinon.stub(Server.prototype, 'open').resolves([])
+        this.open = sinon.stub(ServerE2E.prototype, 'open').resolves([])
       })
 
       it('reads config from a custom config file', function () {
-        sinon.stub(fs, 'readJsonAsync')
-        fs.readJsonAsync.withArgs(path.join(this.pristinePath, this.filename)).resolves({
+        return fs.writeJson(path.join(this.pristinePath, this.filename), {
           env: { foo: 'bar' },
           port: 2020,
-        })
-
-        fs.readJsonAsync.callThrough()
-
-        return cypress.start([
-          `--config-file=${this.filename}`,
-        ])
-        .then(() => {
-          const options = Events.start.firstCall.args[0]
-
-          return Events.handleEvent(options, {}, {}, 123, 'open:project', this.pristinePath)
         }).then(() => {
-          expect(this.open).to.be.called
+          cypress.start([
+          `--config-file=${this.filename}`,
+          ])
+          .then(() => {
+            const options = Events.start.firstCall.args[0]
 
-          const cfg = this.open.getCall(0).args[0]
+            return Events.handleEvent(options, {}, {}, 123, 'open:project', this.pristinePath)
+          }).then(() => {
+            expect(this.open).to.be.called
 
-          expect(cfg.env.foo).to.equal('bar')
+            const cfg = this.open.getCall(0).args[0]
 
-          expect(cfg.port).to.equal(2020)
+            expect(cfg.env.foo).to.equal('bar')
+
+            expect(cfg.port).to.equal(2020)
+          })
         })
       })
 

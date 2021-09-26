@@ -752,6 +752,20 @@ describe('src/cy/commands/actions/click', () => {
       })
     })
 
+    it('each click gets a full command timeout', () => {
+      cy.spy(cy, 'retry')
+
+      cy.get('#three-buttons button').click({ multiple: true }).then(() => {
+        const [firstCall, secondCall] = cy.retry.getCalls()
+        const firstCallOptions = firstCall.args[1]
+        const secondCallOptions = secondCall.args[1]
+
+        // ensure we clone the options object passed to `retry()` so that
+        // each click in `{ multiple: true }` gets its own full timeout
+        expect(firstCallOptions !== secondCallOptions, 'Expected click retry options to be different object references between clicks').to.be.true
+      })
+    })
+
     // this test needs to increase the height + width of the div
     // when we implement scrollBy the delta of the left/top
     it('can click elements which are huge and the center is naturally below the fold', () => {
@@ -1605,6 +1619,24 @@ describe('src/cy/commands/actions/click', () => {
           expect(args[1]).to.deep.eq([fromElWindow, fromElWindow])
 
           expect(args[2]).to.eq(animationDistanceThreshold)
+        })
+      })
+
+      describe('scroll-behavior', () => {
+        afterEach(() => {
+          cy.get('html').invoke('css', 'scrollBehavior', 'inherit')
+        })
+
+        // https://github.com/cypress-io/cypress/issues/3200
+        it('can scroll to and click elements in html with scroll-behavior: smooth', () => {
+          cy.get('html').invoke('css', 'scrollBehavior', 'smooth')
+          cy.get('#table tr:first').click()
+        })
+
+        // https://github.com/cypress-io/cypress/issues/3200
+        it('can scroll to and click elements in ancestor element with scroll-behavior: smooth', () => {
+          cy.get('#dom').invoke('css', 'scrollBehavior', 'smooth')
+          cy.get('#table tr:first').click()
         })
       })
     })
@@ -3975,15 +4007,15 @@ describe('mouse state', () => {
         // TODO: add back assertion on Y values
         const coordsFirefox = {
           clientX: 494,
-          // clientY: 10,
+          clientY: 10,
           // layerX: 492,
           // layerY: 215,
           pageX: 494,
           pageY: 226,
           screenX: 494,
-          // screenY: 10,
+          screenY: 10,
           x: 494,
-          // y: 10,
+          y: 10,
         }
 
         let coords
@@ -3998,8 +4030,7 @@ describe('mouse state', () => {
         }
 
         const mouseout = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: true,
             button: 0,
@@ -4027,13 +4058,16 @@ describe('mouse state', () => {
             type: 'mouseout',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('mouseout', mouseout)
         }).as('mouseout')
+
         const mouseleave = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: false,
             button: 0,
@@ -4062,13 +4096,16 @@ describe('mouse state', () => {
             type: 'mouseleave',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('mouseleave', mouseleave)
         }).as('mouseleave')
+
         const pointerout = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: true,
             button: -1,
@@ -4097,13 +4134,15 @@ describe('mouse state', () => {
             type: 'pointerout',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('pointerout', pointerout)
         }).as('pointerout')
         const pointerleave = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: false,
             button: -1,
@@ -4132,13 +4171,15 @@ describe('mouse state', () => {
             type: 'pointerleave',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('pointerleave', pointerleave)
         }).as('pointerleave')
         const mouseover = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: true,
             button: 0,
@@ -4167,13 +4208,15 @@ describe('mouse state', () => {
             type: 'mouseover',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('mouseover', mouseover)
         }).as('mouseover')
         const mouseenter = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: false,
             button: 0,
@@ -4202,13 +4245,15 @@ describe('mouse state', () => {
             type: 'mouseenter',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('mouseenter', mouseenter)
         }).as('mouseenter')
         const pointerover = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: true,
             button: -1,
@@ -4237,13 +4282,15 @@ describe('mouse state', () => {
             type: 'pointerover',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('pointerover', pointerover)
         }).as('pointerover')
         const pointerenter = cy.stub().callsFake((e) => {
-          expect(_.toPlainObject(e)).to.containSubset({
-            ...coords,
+          const exp = {
             altKey: false,
             bubbles: false,
             button: -1,
@@ -4272,7 +4319,10 @@ describe('mouse state', () => {
             type: 'pointerenter',
             view: cy.state('window'),
             // which: 0,
-          })
+          }
+
+          expect(_.pick(e, _.keys(exp))).to.containSubset(exp)
+          _.each(coords, (v, key) => expect(e[key], key).closeTo(v, 1))
 
           e.target.removeEventListener('pointerenter', pointerenter)
         }).as('pointerenter')
@@ -4661,7 +4711,7 @@ describe('mouse state', () => {
     })
 
     it('can print table of keys on click', () => {
-      const spyTableName = cy.spy(top.console, 'groupCollapsed')
+      const spyTableName = cy.spy(top.console, 'group')
       const spyTableData = cy.spy(top.console, 'table')
 
       cy.get('input:first').click()
@@ -4687,7 +4737,7 @@ describe('mouse state', () => {
     })
 
     it('can print table of keys on dblclick', () => {
-      const spyTableName = cy.spy(top.console, 'groupCollapsed')
+      const spyTableName = cy.spy(top.console, 'group')
       const spyTableData = cy.spy(top.console, 'table')
 
       cy.get('input:first').dblclick()
@@ -4716,7 +4766,7 @@ describe('mouse state', () => {
     })
 
     it('can print table of keys on rightclick', () => {
-      const spyTableName = cy.spy(top.console, 'groupCollapsed')
+      const spyTableName = cy.spy(top.console, 'group')
       const spyTableData = cy.spy(top.console, 'table')
 
       cy.get('input:first').rightclick()

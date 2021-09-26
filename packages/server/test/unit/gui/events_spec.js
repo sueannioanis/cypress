@@ -8,20 +8,23 @@ const debug = require('debug')('test')
 const chromePolicyCheck = require(`${root}../lib/util/chrome_policy_check`)
 const cache = require(`${root}../lib/cache`)
 const logger = require(`${root}../lib/logger`)
-const Project = require(`${root}../lib/project`)
+const ProjectBase = require(`${root}../lib/project-base`).ProjectBase
+const ProjectStatic = require(`${root}../lib/project_static`)
 const Updater = require(`${root}../lib/updater`)
 const user = require(`${root}../lib/user`)
 const errors = require(`${root}../lib/errors`)
 const browsers = require(`${root}../lib/browsers`)
-const openProject = require(`${root}../lib/open_project`)
+const { openProject } = require('../../../lib/open_project')
 const open = require(`${root}../lib/util/open`)
 const auth = require(`${root}../lib/gui/auth`)
 const logs = require(`${root}../lib/gui/logs`)
-const events = require(`../../../lib/gui/events`)
+const events = require(`${root}../lib/gui/events`)
 const dialog = require(`${root}../lib/gui/dialog`)
+const files = require(`${root}../lib/gui/files`)
 const ensureUrl = require(`${root}../lib/util/ensure-url`)
 const konfig = require(`${root}../lib/konfig`)
 const api = require(`${root}../lib/api`)
+const savedState = require(`${root}../lib/saved_state`)
 
 describe('lib/gui/events', () => {
   beforeEach(function () {
@@ -47,12 +50,12 @@ describe('lib/gui/events', () => {
     sinon.stub(electron.ipcMain, 'on')
     sinon.stub(electron.ipcMain, 'removeAllListeners')
 
-    this.handleEvent = (type, arg) => {
+    this.handleEvent = (type, arg, bus = this.bus) => {
       const id = `${type}-${Math.random()}`
 
       return Promise
       .try(() => {
-        return events.handleEvent(this.options, this.bus, this.event, id, type, arg)
+        return events.handleEvent(this.options, bus, this.event, id, type, arg)
       }).return({
         sendCalledWith: (data) => {
           expect(this.send).to.be.calledWith('response', { id, data })
@@ -115,6 +118,39 @@ describe('lib/gui/events', () => {
         sinon.stub(dialog, 'show').rejects(err)
 
         return this.handleEvent('show:directory:dialog').then((assert) => {
+          return assert.sendErrCalledWith(err)
+        })
+      })
+    })
+
+    describe('show:new:spec:dialog', () => {
+      it('calls files.showDialogAndCreateSpec and returns', function () {
+        const response = {
+          path: '/path/to/project/cypress/integration/my_new_spec.js',
+          specs: {
+            integration: [
+              {
+                name: 'app_spec.js',
+                absolute: '/path/to/project/cypress/integration/app_spec.js',
+                relative: 'cypress/integration/app_spec.js',
+              },
+            ],
+          },
+        }
+
+        sinon.stub(files, 'showDialogAndCreateSpec').resolves(response)
+
+        return this.handleEvent('show:new:spec:dialog').then((assert) => {
+          return assert.sendCalledWith(response)
+        })
+      })
+
+      it('catches errors', function () {
+        const err = new Error('foo')
+
+        sinon.stub(files, 'showDialogAndCreateSpec').rejects(err)
+
+        return this.handleEvent('show:new:spec:dialog').then((assert) => {
           return assert.sendErrCalledWith(err)
         })
       })
@@ -185,11 +221,19 @@ describe('lib/gui/events', () => {
 
   context('external shell', () => {
     describe('external:open', () => {
-      it('shell.openExternal with arg', function () {
+      it('shell.openExternal with string arg', function () {
         electron.shell.openExternal = sinon.spy()
 
-        return this.handleEvent('external:open', { foo: 'bar' }).then(() => {
-          expect(electron.shell.openExternal).to.be.calledWith({ foo: 'bar' })
+        return this.handleEvent('external:open', 'https://cypress.io/').then(() => {
+          expect(electron.shell.openExternal).to.be.calledWith('https://cypress.io/')
+        })
+      })
+
+      it('shell.openExternal with obj arg', function () {
+        electron.shell.openExternal = sinon.spy()
+
+        return this.handleEvent('external:open', { url: 'https://cypress.io/' }).then(() => {
+          expect(electron.shell.openExternal).to.be.calledWith('https://cypress.io/')
         })
       })
     })
@@ -399,7 +443,7 @@ describe('lib/gui/events', () => {
   context('user events', () => {
     describe('get:orgs', () => {
       it('returns array of orgs', function () {
-        sinon.stub(Project, 'getOrgs').resolves([])
+        sinon.stub(ProjectStatic, 'getOrgs').resolves([])
 
         return this.handleEvent('get:orgs').then((assert) => {
           return assert.sendCalledWith([])
@@ -409,7 +453,7 @@ describe('lib/gui/events', () => {
       it('catches errors', function () {
         const err = new Error('foo')
 
-        sinon.stub(Project, 'getOrgs').rejects(err)
+        sinon.stub(ProjectStatic, 'getOrgs').rejects(err)
 
         return this.handleEvent('get:orgs').then((assert) => {
           return assert.sendErrCalledWith(err)
@@ -440,10 +484,10 @@ describe('lib/gui/events', () => {
 
       it('works even after project is opened (issue #227)', function () {
         sinon.stub(open, 'opn').resolves('okay')
-        sinon.stub(Project.prototype, 'open').resolves()
-        sinon.stub(Project.prototype, 'getConfig').resolves({ some: 'config' })
+        sinon.stub(ProjectBase.prototype, 'open').resolves()
+        sinon.stub(ProjectBase.prototype, 'getConfig').resolves({ some: 'config' })
 
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e')
         .then(() => {
           return this.handleEvent('open:finder', 'path')
         }).then((assert) => {
@@ -453,12 +497,58 @@ describe('lib/gui/events', () => {
         })
       })
     })
+
+    describe('has:opened:cypress', function () {
+      beforeEach(function () {
+        this.state = {
+          set: sinon.stub().resolves(),
+          get: sinon.stub().resolves({}),
+        }
+
+        sinon.stub(savedState, 'create').resolves(this.state)
+      })
+
+      it('returns false when there is no existing saved state', function () {
+        return this.handleEvent('has:opened:cypress')
+        .then((assert) => {
+          assert.sendCalledWith(false)
+        })
+      })
+
+      it('returns true when there is any existing saved state', function () {
+        this.state.get.resolves({ shownOnboardingModal: true })
+
+        return this.handleEvent('has:opened:cypress')
+        .then((assert) => {
+          assert.sendCalledWith(true)
+        })
+      })
+
+      it('sets firstOpenedCypress when the user first opened Cypress if not already set', function () {
+        this.state.get.resolves({ shownOnboardingModal: true })
+        sinon.stub(Date, 'now').returns(12345)
+
+        return this.handleEvent('has:opened:cypress')
+        .then(() => {
+          expect(this.state.set).to.be.calledWith('firstOpenedCypress', 12345)
+        })
+      })
+
+      it('does not set firstOpenedCypress if already set', function () {
+        this.state.get.resolves({ firstOpenedCypress: 12345 })
+
+        return this.handleEvent('has:opened:cypress')
+        .then(() => {
+          expect(this.state.set).not.to.be.called
+        })
+      })
+    })
   })
 
   context('project events', () => {
     describe('get:projects', () => {
       it('returns array of projects', function () {
-        sinon.stub(Project, 'getPathsAndIds').resolves([])
+        sinon.stub(ProjectStatic, 'getPathsAndIds').resolves([])
 
         return this.handleEvent('get:projects').then((assert) => {
           return assert.sendCalledWith([])
@@ -468,7 +558,7 @@ describe('lib/gui/events', () => {
       it('catches errors', function () {
         const err = new Error('foo')
 
-        sinon.stub(Project, 'getPathsAndIds').rejects(err)
+        sinon.stub(ProjectStatic, 'getPathsAndIds').rejects(err)
 
         return this.handleEvent('get:projects').then((assert) => {
           return assert.sendErrCalledWith(err)
@@ -478,7 +568,7 @@ describe('lib/gui/events', () => {
 
     describe('get:project:statuses', () => {
       it('returns array of projects with statuses', function () {
-        sinon.stub(Project, 'getProjectStatuses').resolves([])
+        sinon.stub(ProjectStatic, 'getProjectStatuses').resolves([])
 
         return this.handleEvent('get:project:statuses').then((assert) => {
           return assert.sendCalledWith([])
@@ -488,7 +578,7 @@ describe('lib/gui/events', () => {
       it('catches errors', function () {
         const err = new Error('foo')
 
-        sinon.stub(Project, 'getProjectStatuses').rejects(err)
+        sinon.stub(ProjectStatic, 'getProjectStatuses').rejects(err)
 
         return this.handleEvent('get:project:statuses').then((assert) => {
           return assert.sendErrCalledWith(err)
@@ -498,7 +588,7 @@ describe('lib/gui/events', () => {
 
     describe('get:project:status', () => {
       it('returns project returned by Project.getProjectStatus', function () {
-        sinon.stub(Project, 'getProjectStatus').resolves('project')
+        sinon.stub(ProjectStatic, 'getProjectStatus').resolves('project')
 
         return this.handleEvent('get:project:status').then((assert) => {
           return assert.sendCalledWith('project')
@@ -508,7 +598,7 @@ describe('lib/gui/events', () => {
       it('catches errors', function () {
         const err = new Error('foo')
 
-        sinon.stub(Project, 'getProjectStatus').rejects(err)
+        sinon.stub(ProjectStatic, 'getProjectStatus').rejects(err)
 
         return this.handleEvent('get:project:status').then((assert) => {
           return assert.sendErrCalledWith(err)
@@ -518,7 +608,7 @@ describe('lib/gui/events', () => {
 
     describe('add:project', () => {
       it('adds project + returns result', function () {
-        sinon.stub(Project, 'add').withArgs('/_test-output/path/to/project', this.options).resolves('result')
+        sinon.stub(ProjectStatic, 'add').withArgs('/_test-output/path/to/project', this.options).resolves('result')
 
         return this.handleEvent('add:project', '/_test-output/path/to/project').then((assert) => {
           return assert.sendCalledWith('result')
@@ -528,7 +618,7 @@ describe('lib/gui/events', () => {
       it('catches errors', function () {
         const err = new Error('foo')
 
-        sinon.stub(Project, 'add').withArgs('/_test-output/path/to/project', this.options).rejects(err)
+        sinon.stub(ProjectStatic, 'add').withArgs('/_test-output/path/to/project', this.options).rejects(err)
 
         return this.handleEvent('add:project', '/_test-output/path/to/project').then((assert) => {
           return assert.sendErrCalledWith(err)
@@ -538,34 +628,42 @@ describe('lib/gui/events', () => {
 
     describe('remove:project', () => {
       it('remove project + returns arg', function () {
-        sinon.stub(cache, 'removeProject').withArgs('/_test-output/path/to/project').resolves()
+        sinon.stub(cache, 'removeProject').withArgs('/_test-output/path/to/project-e2e').resolves()
 
-        return this.handleEvent('remove:project', '/_test-output/path/to/project').then((assert) => {
-          return assert.sendCalledWith('/_test-output/path/to/project')
+        return this.handleEvent('remove:project', '/_test-output/path/to/project-e2e').then((assert) => {
+          return assert.sendCalledWith('/_test-output/path/to/project-e2e')
         })
       })
 
       it('catches errors', function () {
         const err = new Error('foo')
 
-        sinon.stub(cache, 'removeProject').withArgs('/_test-output/path/to/project').rejects(err)
+        sinon.stub(cache, 'removeProject').withArgs('/_test-output/path/to/project-e2e').rejects(err)
 
-        return this.handleEvent('remove:project', '/_test-output/path/to/project').then((assert) => {
+        return this.handleEvent('remove:project', '/_test-output/path/to/project-e2e').then((assert) => {
           return assert.sendErrCalledWith(err)
         })
       })
     })
 
     describe('open:project', () => {
+      function busStub () {
+        return {
+          on: sinon.stub(),
+          removeAllListeners: sinon.stub(),
+        }
+      }
+
       beforeEach(function () {
         sinon.stub(extension, 'setHostAndPath').resolves()
         sinon.stub(browsers, 'getAllBrowsersWith')
         browsers.getAllBrowsersWith.resolves([])
         browsers.getAllBrowsersWith.withArgs('/usr/bin/baz-browser').resolves([{ foo: 'bar' }])
-        this.open = sinon.stub(Project.prototype, 'open').resolves()
-        sinon.stub(Project.prototype, 'close').resolves()
+        this.initializeConfig = sinon.stub(ProjectBase.prototype, 'initializeConfig').resolves()
+        this.open = sinon.stub(ProjectBase.prototype, 'open').resolves()
+        sinon.stub(ProjectBase.prototype, 'close').resolves()
 
-        return sinon.stub(Project.prototype, 'getConfig').resolves({ some: 'config' })
+        return sinon.stub(ProjectBase.prototype, 'getConfig').resolves({ some: 'config' })
       })
 
       afterEach(() => {
@@ -573,9 +671,11 @@ describe('lib/gui/events', () => {
       })
 
       it('open project + returns config', function () {
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e')
         .then((assert) => {
-          return assert.sendCalledWith({ some: 'config' })
+          expect(this.send.firstCall.args[0]).to.eq('response') // [1].id).to.match(/setup:dashboard:project-/)
+          expect(this.send.firstCall.args[1].id).to.match(/open:project-/)
+          expect(this.send.firstCall.args[1].data).to.eql({ some: 'config' })
         })
       })
 
@@ -584,69 +684,69 @@ describe('lib/gui/events', () => {
 
         this.open.rejects(err)
 
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e')
         .then((assert) => {
           return assert.sendErrCalledWith(err)
         })
       })
 
       it('sends \'focus:tests\' onFocusTests', function () {
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
-        .then(() => {
-          return this.handleEvent('on:focus:tests')
-        }).then((assert) => {
-          this.open.lastCall.args[0].onFocusTests()
+        const bus = busStub()
 
-          return assert.sendCalledWith(undefined)
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e', bus)
+        .then(() => {
+          return this.handleEvent('on:focus:tests', '', bus)
+        }).then(() => {
+          expect(bus.on).to.have.been.calledWith('focus:tests')
         })
       })
 
       it('sends \'config:changed\' onSettingsChanged', function () {
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
-        .then(() => {
-          return this.handleEvent('on:config:changed')
-        }).then((assert) => {
-          this.open.lastCall.args[0].onSettingsChanged()
+        const bus = busStub()
 
-          return assert.sendCalledWith(undefined)
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e', bus)
+        .then(() => {
+          return this.handleEvent('on:config:changed', '', bus)
+        }).then(() => {
+          expect(bus.on).to.have.been.calledWith('config:changed')
         })
       })
 
       it('sends \'spec:changed\' onSpecChanged', function () {
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
-        .then(() => {
-          return this.handleEvent('on:spec:changed')
-        }).then((assert) => {
-          this.open.lastCall.args[0].onSpecChanged('/path/to/spec.coffee')
+        const bus = busStub()
 
-          return assert.sendCalledWith('/path/to/spec.coffee')
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e')
+        .then(() => {
+          return this.handleEvent('on:spec:changed', '', bus)
+        }).then((assert) => {
+          expect(bus.on).to.have.been.calledWith('spec:changed')
         })
       })
 
       it('sends \'project:warning\' onWarning', function () {
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
-        .then(() => {
-          return this.handleEvent('on:project:warning')
-        }).then((assert) => {
-          this.open.lastCall.args[0].onWarning({ name: 'foo', message: 'foo' })
+        const bus = busStub()
 
-          return assert.sendCalledWith({ name: 'foo', message: 'foo' })
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e')
+        .then(() => {
+          return this.handleEvent('on:project:warning', '', bus)
+        }).then(() => {
+          expect(bus.on).to.have.been.calledWith('project:warning')
         })
       })
 
       it('sends \'project:error\' onError', function () {
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
-        .then(() => {
-          return this.handleEvent('on:project:error')
-        }).then((assert) => {
-          this.open.lastCall.args[0].onError({ name: 'foo', message: 'foo' })
+        const bus = busStub()
 
-          return assert.sendCalledWith({ name: 'foo', message: 'foo' })
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e')
+        .then(() => {
+          return this.handleEvent('on:project:error', '', bus)
+        }).then((assert) => {
+          expect(bus.on).to.have.been.calledWith('project:error')
         })
       })
 
       it('calls browsers.getAllBrowsersWith with no args when no browser specified', function () {
-        return this.handleEvent('open:project', '/_test-output/path/to/project').then(() => {
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e').then(() => {
           expect(browsers.getAllBrowsersWith).to.be.calledWith()
         })
       })
@@ -655,7 +755,7 @@ describe('lib/gui/events', () => {
         sinon.stub(openProject, 'create').resolves()
         this.options.browser = '/usr/bin/baz-browser'
 
-        return this.handleEvent('open:project', '/_test-output/path/to/project').then(() => {
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e').then(() => {
           expect(browsers.getAllBrowsersWith).to.be.calledWith(this.options.browser)
 
           expect(openProject.create).to.be.calledWithMatch(
@@ -682,7 +782,7 @@ describe('lib/gui/events', () => {
 
         sinon.stub(chromePolicyCheck, 'run').callsArgWith(0, new Error)
 
-        return this.handleEvent('open:project', '/_test-output/path/to/project').then(() => {
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e').then(() => {
           expect(browsers.getAllBrowsersWith).to.be.calledWith(this.options.browser)
 
           expect(openProject.create).to.be.calledWithMatch(
@@ -708,22 +808,14 @@ describe('lib/gui/events', () => {
 
     describe('close:project', () => {
       beforeEach(() => {
-        return sinon.stub(Project.prototype, 'close').withArgs({ sync: true }).resolves()
-      })
-
-      it('is noop and returns null when no project is open', function () {
-        expect(openProject.getProject()).to.be.null
-
-        return this.handleEvent('close:project').then((assert) => {
-          return assert.sendCalledWith(null)
-        })
+        return sinon.stub(ProjectBase.prototype, 'close').withArgs({ sync: true }).resolves()
       })
 
       it('closes down open project and returns null', function () {
-        sinon.stub(Project.prototype, 'getConfig').resolves({})
-        sinon.stub(Project.prototype, 'open').resolves()
+        sinon.stub(ProjectBase.prototype, 'getConfig').resolves({})
+        sinon.stub(ProjectBase.prototype, 'open').resolves()
 
-        return this.handleEvent('open:project', '/_test-output/path/to/project')
+        return this.handleEvent('open:project', '/_test-output/path/to/project-e2e')
         .then(() => {
           // it should store the opened project
           expect(openProject.getProject()).not.to.be.null
@@ -733,6 +825,15 @@ describe('lib/gui/events', () => {
           // it should store the opened project
           expect(openProject.getProject()).to.be.null
 
+          return assert.sendCalledWith(null)
+        })
+      })
+
+      it('is noop and returns null when no project is open', function () {
+        openProject.__reset()
+        expect(openProject.getProject()).to.be.null
+
+        return this.handleEvent('close:project').then((assert) => {
           return assert.sendCalledWith(null)
         })
       })
@@ -823,21 +924,40 @@ describe('lib/gui/events', () => {
       })
     })
 
-    describe('setup:dashboard:project', () => {
-      it('returns result of openProject.createCiProject', function () {
-        sinon.stub(openProject, 'createCiProject').resolves('response')
+    describe('set:project:id', () => {
+      it('calls writeProjectId with projectRoot', function () {
+        const arg = { id: '1', projectRoot: '/project/root/' }
+        const stub = sinon.stub(ProjectStatic, 'writeProjectId').resolves()
 
-        return this.handleEvent('setup:dashboard:project').then((assert) => {
-          return assert.sendCalledWith('response')
+        return this.handleEvent('set:project:id', arg)
+        .then(() => {
+          expect(stub).to.be.calledWith(arg.id, arg.projectRoot)
+          expect(this.send.firstCall.args[0]).to.eq('response')
+          expect(this.send.firstCall.args[1].id).to.match(/set:project:id-/)
+        })
+      })
+    })
+
+    describe('setup:dashboard:project', () => {
+      it('returns result of ProjectStatic.createCiProject', function () {
+        const arg = { projectRoot: '/project/root/' }
+        const stub = sinon.stub(ProjectStatic, 'createCiProject').resolves()
+
+        return this.handleEvent('setup:dashboard:project', arg)
+        .then(() => {
+          expect(stub).to.be.calledWith(arg, arg.projectRoot)
+          expect(this.send.firstCall.args[0]).to.eq('response')
+          expect(this.send.firstCall.args[1].id).to.match(/setup:dashboard:project-/)
         })
       })
 
       it('catches errors', function () {
         const err = new Error('foo')
 
-        sinon.stub(openProject, 'createCiProject').rejects(err)
+        sinon.stub(ProjectStatic, 'createCiProject').rejects(err)
 
-        return this.handleEvent('setup:dashboard:project').then((assert) => {
+        return this.handleEvent('setup:dashboard:project', { projectRoot: '/foo/bar' })
+        .then((assert) => {
           return assert.sendErrCalledWith(err)
         })
       })

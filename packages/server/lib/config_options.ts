@@ -5,7 +5,7 @@ const v = require('./util/validation')
 // - cli/types/index.d.ts (including allowed config options on TestOptions)
 // - cypress.schema.json
 //
-// Add options in alphabetical order
+// Add options in alphabetical order for better readability
 
 export const options = [
   {
@@ -37,6 +37,15 @@ export const options = [
     defaultValue: '/__/',
     isInternal: true,
   }, {
+    name: 'clientCertificates',
+    defaultValue: [],
+    validation: v.isValidClientCertificatesSet,
+  }, {
+    name: 'component',
+    // runner-ct overrides
+    defaultValue: {},
+    validation: v.isValidConfig,
+  }, {
     name: 'componentFolder',
     defaultValue: 'cypress/component',
     validation: v.isStringOrFalse,
@@ -53,6 +62,20 @@ export const options = [
     defaultValue: 4000,
     validation: v.isNumber,
   }, {
+    name: 'devServerPublicPathRoute',
+    defaultValue: '/__cypress/src',
+    isInternal: true,
+  }, {
+    name: 'downloadsFolder',
+    defaultValue: 'cypress/downloads',
+    validation: v.isString,
+    isFolder: true,
+  }, {
+    name: 'e2e',
+    // e2e runner overrides
+    defaultValue: {},
+    validation: v.isValidConfig,
+  }, {
     name: 'env',
     validation: v.isPlainObject,
   }, {
@@ -60,17 +83,12 @@ export const options = [
     defaultValue: 60000,
     validation: v.isNumber,
   }, {
-    name: 'experimentalComponentTesting',
-    defaultValue: false,
-    validation: v.isBoolean,
-    isExperimental: true,
-  }, {
     name: 'experimentalFetchPolyfill',
     defaultValue: false,
     validation: v.isBoolean,
     isExperimental: true,
   }, {
-    name: 'experimentalRunEvents',
+    name: 'experimentalInteractiveRunEvents',
     defaultValue: false,
     validation: v.isBoolean,
     isExperimental: true,
@@ -80,17 +98,20 @@ export const options = [
     validation: v.isBoolean,
     isExperimental: true,
   }, {
+    name: 'experimentalStudio',
+    defaultValue: false,
+    validation: v.isBoolean,
+    isExperimental: true,
+  }, {
+    name: 'experimentalSessionSupport',
+    defaultValue: false,
+    validation: v.isBoolean,
+    isExperimental: true,
+  }, {
     name: 'fileServerFolder',
     defaultValue: '',
     validation: v.isString,
     isFolder: true,
-  }, {
-    name: 'firefoxGcInterval',
-    defaultValue: {
-      runMode: 1,
-      openMode: null,
-    },
-    validation: v.isValidFirefoxGcInterval,
   }, {
     name: 'fixturesFolder',
     defaultValue: 'cypress/fixtures',
@@ -115,10 +136,6 @@ export const options = [
   }, {
     name: 'isTextTerminal',
     defaultValue: false,
-    isInternal: true,
-  }, {
-    name: 'javascripts',
-    defaultValue: [],
     isInternal: true,
   }, {
     name: 'morgan',
@@ -157,6 +174,9 @@ export const options = [
     name: 'projectId',
     defaultValue: null,
     validation: v.isString,
+  }, {
+    name: 'redirectionLimit',
+    defaultValue: 20,
   }, {
     name: 'reporter',
     defaultValue: 'spec',
@@ -204,6 +224,10 @@ export const options = [
     name: 'socketIoRoute',
     defaultValue: '/__socket.io',
     isInternal: true,
+  }, {
+    name: 'scrollBehavior',
+    defaultValue: 'top',
+    validation: v.isOneOf('center', 'top', 'bottom', 'nearest', false),
   }, {
     name: 'socketIoCookie',
     defaultValue: '__socket.io',
@@ -266,10 +290,6 @@ export const options = [
     defaultValue: true,
     validation: v.isBoolean,
   }, {
-    name: 'scrollBehavior',
-    defaultValue: 'top',
-    validation: v.isOneOf('center', 'top', 'bottom', 'nearest', false),
-  }, {
     name: 'watchForFileChanges',
     defaultValue: true,
     validation: v.isBoolean,
@@ -286,16 +306,28 @@ export const breakingOptions = [
     errorKey: 'RENAMED_CONFIG_OPTION',
     newName: 'blockHosts',
   }, {
+    name: 'experimentalComponentTesting',
+    errorKey: 'EXPERIMENTAL_COMPONENT_TESTING_REMOVED',
+    isWarning: false,
+  }, {
     name: 'experimentalGetCookiesSameSite',
     errorKey: 'EXPERIMENTAL_SAMESITE_REMOVED',
+    isWarning: true,
+  }, {
+    name: 'experimentalNetworkStubbing',
+    errorKey: 'EXPERIMENTAL_NETWORK_STUBBING_REMOVED',
+    isWarning: true,
+  }, {
+    name: 'experimentalRunEvents',
+    errorKey: 'EXPERIMENTAL_RUN_EVENTS_REMOVED',
     isWarning: true,
   }, {
     name: 'experimentalShadowDomSupport',
     errorKey: 'EXPERIMENTAL_SHADOW_DOM_REMOVED',
     isWarning: true,
   }, {
-    name: 'experimentalNetworkStubbing',
-    errorKey: 'EXPERIMENTAL_NETWORK_STUBBING_REMOVED',
+    name: 'firefoxGcInterval',
+    errorKey: 'FIREFOX_GC_INTERVAL_REMOVED',
     isWarning: true,
   },
 ]

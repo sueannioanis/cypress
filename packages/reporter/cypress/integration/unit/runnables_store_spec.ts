@@ -122,10 +122,10 @@ describe('runnables store', () => {
       rootRunnable.suites![0].suites[0].hooks = [createHook('h3')]
       rootRunnable.suites![0].suites[0].tests[0].hooks = [createHook('h4')]
       instance.setRunnables(rootRunnable)
-      expect(instance.runnables[0].hooks.length).to.equal(1)
+      expect(instance.runnables[0].hooks.length).to.equal(2)
       expect(instance.runnables[1].hooks.length).to.equal(2)
       expect((instance.runnables[1] as SuiteModel).children[2].hooks.length).to.equal(3)
-      expect(((instance.runnables[1] as SuiteModel).children[2] as SuiteModel).children[0].hooks.length).to.equal(5)
+      expect(((instance.runnables[1] as SuiteModel).children[2] as SuiteModel).children[0].hooks.length).to.equal(6)
     })
 
     it('sets .isReady flag', () => {
@@ -156,13 +156,6 @@ describe('runnables store', () => {
     it('sets .hasSingleTest flag to false if there are multiple tests', () => {
       instance.setRunnables(createRootRunnable())
       expect(instance.hasSingleTest).to.be.false
-    })
-
-    it('starts rendering the runnables on requestAnimationFrame', () => {
-      instance.setRunnables({ tests: [], suites: [createSuite('1', [], []), createSuite('2', [createTest('1')], [])] })
-      expect(instance.runnables[0].shouldRender).to.be.true
-      expect(instance.runnables[1].shouldRender).to.be.true
-      expect((instance.runnables[1] as SuiteModel).children[0].shouldRender).to.be.true
     })
 
     it('sets scrollTop when app is running and initial scrollTop has been set', () => {
@@ -221,6 +214,22 @@ describe('runnables store', () => {
     })
   })
 
+  context('#addLog', () => {
+    it('adds the log', () => {
+      const test = createTest('1')
+
+      test.hooks = [createHook('h1')]
+
+      instance.setRunnables({ tests: [test] })
+
+      instance.addLog(createCommand(1, '1', 'h1'))
+      expect(instance.testById('1').lastAttempt.commands.length).to.equal(1)
+
+      instance.addLog(createCommand(2, '1', 'h1'))
+      expect(instance.testById('1').lastAttempt.commands.length).to.equal(2)
+    })
+  })
+
   context('#updateLog', () => {
     it('updates the log', () => {
       const test = createTest('1')
@@ -228,9 +237,44 @@ describe('runnables store', () => {
       test.hooks = [createHook('h1')]
 
       instance.setRunnables({ tests: [test] })
+
       instance.addLog(createCommand(1, '1', 'h1'))
       instance.updateLog({ id: 1, testId: '1', name: 'new name' } as LogProps)
       expect(instance.testById('1').lastAttempt.commands[0].name).to.equal('new name')
+    })
+  })
+
+  context('#removeLog', () => {
+    it('removes the log', () => {
+      const test = createTest('1')
+
+      test.hooks = [createHook('h1')]
+
+      instance.setRunnables({ tests: [test] })
+
+      instance.addLog(createCommand(1, '1', 'h1'))
+      instance.addLog(createCommand(2, '1', 'h1'))
+      expect(instance.testById('1').lastAttempt.commands.length).to.equal(2)
+
+      instance.removeLog(createCommand(1, '1', 'h1'))
+      expect(instance.testById('1').lastAttempt.commands.length).to.equal(1)
+      expect(instance.testById('1').lastAttempt.commands[0].id).to.equal(2)
+    })
+  })
+
+  context('#setRunningSpec', () => {
+    it('sets the current runnable as the path passed', () => {
+      instance.setRunnables({ tests: [createTest('1')] })
+      instance.setRunningSpec('specPath')
+      expect(instance.runningSpec).to.equal('specPath')
+    })
+
+    it('add the previous path to the spec history', () => {
+      instance.setRunnables({ tests: [createTest('1')] })
+      instance.setRunningSpec('previousSpecPath')
+      instance.setRunningSpec('nextSpecPath')
+      expect(instance.runningSpec).to.equal('nextSpecPath')
+      expect(instance.runnablesHistory['previousSpecPath']).not.to.be.undefined
     })
   })
 
@@ -258,6 +302,13 @@ describe('runnables store', () => {
       instance.setRunnables({ tests: [createTest('1')] })
       instance.reset()
       expect(instance.testById('1')).to.be.undefined
+    })
+
+    it('resets runnablesHistory', () => {
+      instance.setRunnables({ tests: [createTest('1')] })
+      instance.setRunningSpec('previous')
+      instance.reset()
+      expect(instance.runnablesHistory).to.be.empty
     })
   })
 })

@@ -5,9 +5,11 @@ import _ from 'lodash'
 import React, { Component } from 'react'
 import { observer } from 'mobx-react'
 import Loader from 'react-loader'
+import BootstrapModal from 'react-bootstrap-modal'
 import Tooltip from '@cypress/react-tooltip'
 
 import FileOpener from './file-opener'
+import Notification from '../notifications/notification'
 import ipc from '../lib/ipc'
 import projectsApi from '../projects/projects-api'
 import specsStore, { allIntegrationSpecsSpec, allComponentSpecsSpec } from './specs-store'
@@ -23,9 +25,7 @@ const formRunButtonLabel = (areTestsAlreadyRunning, specType, specsN) => {
     return `Running ${specType} tests`
   }
 
-  const label = specsN === 1 ? `Run 1 ${specType} spec` : `Run ${specsN} ${specType} specs`
-
-  return label
+  return specsN === 1 ? `Run 1 ${specType} spec` : `Run ${specsN} ${specType} specs`
 }
 
 /**
@@ -57,7 +57,13 @@ const sortedSpecList = (specs) => {
 class SpecsList extends Component {
   constructor (props) {
     super(props)
+    this.state = {
+      isFocused: false,
+      confirmRemoveScaffoldedFiles: false,
+    }
+
     this.filterRef = React.createRef()
+    this.newSpecRef = React.createRef()
     // when the specs are running and the user changes the search filter
     // we still want to show the previous button label to reflect what
     // is currently running
@@ -71,8 +77,30 @@ class SpecsList extends Component {
     }
   }
 
+  componentDidMount () {
+    ipc.hasOpenedCypress().then((opened) => {
+      this.props.project.update({ newUserBannerOpen: !opened })
+    })
+  }
+
+  componentDidUpdate () {
+    if (this.newSpecRef.current) {
+      this.newSpecRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // unset new spec after animation to prevent further scrolling
+      this.removeNewSpecTimeout = setTimeout(() => specsStore.setNewSpecPath(null), 3000)
+    }
+  }
+
+  componentWillUnmount () {
+    if (this.removeNewSpecTimeout) {
+      clearTimeout(this.removeNewSpecTimeout)
+    }
+
+    specsStore.setNewSpecPath(null)
+  }
+
   render () {
-    if (specsStore.isLoading) return <Loader color='#888' scale={0.5}/>
+    if (specsStore.isLoading) return <Loader color='#888' scale={0.5} />
 
     const filteredSpecs = specsStore.getFilteredSpecs()
 
@@ -95,6 +123,8 @@ class SpecsList extends Component {
 
     return (
       <div className='specs'>
+        {this._banners()}
+        {this._confirmRemoveScaffoldedFilesDialog()}
         <header>
           <div className={cs('search', {
             'show-clear-filter': !!specsStore.filter,
@@ -105,12 +135,17 @@ class SpecsList extends Component {
             <input
               id='filter'
               className='filter'
-              placeholder='Search...'
+              placeholder={this._togglePlaceholderSearchTips()}
               value={specsStore.filter || ''}
               ref={this.filterRef}
+              onBlur={this._toggleFocus}
               onChange={this._updateFilter}
+              onFocus={this._toggleFocus}
               onKeyUp={this._executeFilterAction}
             />
+
+            { window.addEventListener('keydown', this._focusWhenSearchKeys) }
+
             <Tooltip
               title='Clear search'
               className='browser-info-tooltip cy-tooltip'
@@ -118,8 +153,12 @@ class SpecsList extends Component {
               <a className='clear-filter fas fa-times' onClick={this._clearFilter} />
             </Tooltip>
           </div>
+          <div className='new-file-button'>
+            <button className='btn btn-link' onClick={this._createNewFile}><i className="fa fa-plus" /> New Spec File</button>
+          </div>
         </header>
         {this._specsList()}
+        {this._newSpecNotification()}
       </div>
     )
   }
@@ -149,6 +188,22 @@ class SpecsList extends Component {
 
   _specItem (spec, nestingLevel) {
     return spec.hasChildren ? this._folderContent(spec, nestingLevel) : this._specContent(spec, nestingLevel)
+  }
+
+  _toggleFocus = () => {
+    this.setState({
+      isFocused: !this.state.isFocused,
+    })
+  }
+
+  _searchPlaceholderText () {
+    const osKey = window.clientInformation['platform'] === 'MacIntel' ? 'Cmd' : 'Ctrl'
+
+    return `Press ${osKey} + F to search...`
+  }
+
+  _togglePlaceholderSearchTips = () => {
+    return (this.state.isFocused) ? 'Search' : this._searchPlaceholderText()
   }
 
   _allSpecsIcon () {
@@ -186,9 +241,21 @@ class SpecsList extends Component {
     }
   }
 
+  _focusWhenSearchKeys = (e) => {
+    const keysForMacOs = (e.metaKey && e.keyCode === 70 && window.clientInformation['platform'] === 'MacIntel')
+    const keysForOtherOs = (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70 && window.clientInformation['platform'] !== 'MacIntel'))
+
+    return (keysForOtherOs || keysForMacOs)
+      // @ts-ignore
+      ? document.querySelector('#filter').focus()
+      : ''
+  }
+
   _selectSpec (spec, e) {
     e.preventDefault()
     e.stopPropagation()
+
+    if (specsStore.isChosen(spec)) return
 
     const { project } = this.props
 
@@ -223,6 +290,22 @@ class SpecsList extends Component {
     e.preventDefault()
 
     specsStore.toggleExpandSpecFolder(specFolderPath)
+  }
+
+  _openSpecFolder (specFolderPath, e) {
+    if (e.key === 'Enter' || e.keyCode === 32) specsStore.toggleExpandSpecFolder(specFolderPath)
+  }
+
+  _createNewFile = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    ipc.showNewSpecDialog().then(({ specs, path }) => {
+      if (path) {
+        specsStore.setNewSpecPath(path)
+        specsStore.setSpecs(specs)
+      }
+    })
   }
 
   _folderContent (spec, nestingLevel) {
@@ -262,10 +345,12 @@ class SpecsList extends Component {
         }><i className={`fa-fw ${this._allSpecsIcon()}`} />{' '}{buttonText}</button>)
     }
 
+    const tabIndex = 0
+
     return (
       <li key={spec.path} className={`folder level-${nestingLevel} ${isExpanded ? 'folder-expanded' : 'folder-collapsed'}`}>
         <div>
-          <div className="folder-name" onClick={this._selectSpecFolder.bind(this, spec)}>
+          <div tabIndex={tabIndex} className="folder-name" onKeyDown={this._openSpecFolder.bind(this, spec)} onClick={this._selectSpecFolder.bind(this, spec)}>
             <i className={`folder-collapse-icon fas fa-fw ${isExpanded ? 'fa-caret-down' : 'fa-caret-right'}`} />
             {nestingLevel !== 0 ? <i className={`far fa-fw ${isExpanded ? 'fa-folder-open' : 'fa-folder'}`} /> : null}
             {
@@ -307,13 +392,14 @@ class SpecsList extends Component {
     }
 
     const isActive = specsStore.isChosen(spec)
-    const className = cs(`file level-${nestingLevel}`, { active: isActive })
+    const isNew = specsStore.isNew(spec)
+    const className = cs(`file level-${nestingLevel}`, { active: isActive, 'new-spec': isNew })
 
     return (
-      <li key={spec.path} className={className}>
+      <li key={spec.path} className={className} ref={isNew ? this.newSpecRef : null}>
         <a href='#' onClick={this._selectSpec.bind(this, spec)} className="file-name-wrapper">
           <div className="file-name">
-            <i className={`fa-fw ${this._specIcon(specsStore.isChosen(spec))}`} />
+            <i className={`fa-fw ${this._specIcon(isActive)}`} />
             {spec.displayName}
           </div>
         </a>
@@ -328,20 +414,141 @@ class SpecsList extends Component {
         <div className='empty-well'>
           <h5>
             No files found in
-            <code onClick={this._openIntegrationFolder.bind(this)}>
+            <code onClick={this._openIntegrationFolder}>
               {this.props.project.integrationFolder}
             </code>
           </h5>
-          <a className='helper-docs-link' onClick={this._openHelp}>
-            <i className='fas fa-question-circle' />{' '}
-              Need help?
-          </a>
+          <p>
+            <a onClick={this._createNewFile}>
+              <i className='fas fa-plus' /> New Spec File
+            </a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className='helper-docs-link' onClick={this._openHelp}>
+              <i className='fas fa-question-circle' /> Need help?
+            </a>
+          </p>
         </div>
       </div>
     )
   }
 
-  _openIntegrationFolder () {
+  _closeBanners = () => {
+    this.props.project.closeBanners()
+    ipc.newProjectBannerClosed()
+  }
+
+  _removeScaffoldedFiles = () => {
+    ipc.removeScaffoldedFiles().then(this._closeBanners)
+  }
+
+  _openRemoveScaffoldedFilesDialog = () => {
+    this.setState({ confirmRemoveScaffoldedFiles: true })
+  }
+
+  _closeRemoveScaffoldedFilesDialog = () => {
+    this.setState({ confirmRemoveScaffoldedFiles: false })
+  }
+
+  _openHowToNewProjectBanner = (e) => {
+    e.preventDefault()
+    ipc.externalOpen({
+      url: 'https://on.cypress.io/writing-first-test',
+      params: {
+        utm_medium: 'New Project Banner',
+        utm_campaign: 'How To',
+      },
+    })
+  }
+
+  _openHowToNewUserBanner = (e) => {
+    e.preventDefault()
+    ipc.externalOpen({
+      url: 'https://on.cypress.io/writing-first-test',
+      params: {
+        utm_medium: 'New User Banner',
+        utm_campaign: 'How To',
+      },
+    })
+  }
+
+  _openIntroNewUserBanner = (e) => {
+    e.preventDefault()
+    ipc.externalOpen({
+      url: 'https://on.cypress.io/intro-to-cypress',
+      params: {
+        utm_medium: 'New User Banner',
+        utm_campaign: 'Intro Guide',
+      },
+    })
+  }
+
+  _banners () {
+    if (this.props.project.newProjectBannerOpen) {
+      return (
+        <div className="onboarding-banner new-project-banner info-box info-box-dismissible">
+          <p className="header">
+            <strong>Welcome to Cypress!</strong>
+          </p>
+          <p>We've created some sample test files that demonstrate key Cypress concepts to help you get started.</p>
+          <p className="action-links">
+            <a onClick={this._openHowToNewProjectBanner}>How to write your first test <i className="fa fa-sm fa-external-link-alt" /></a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <a className="link-danger" onClick={this._openRemoveScaffoldedFilesDialog}>No thanks, delete example files</a>
+          </p>
+          <button className="close" onClick={this._closeBanners}><span>&times;</span></button>
+        </div>
+      )
+    }
+
+    if (this.props.project.newUserBannerOpen) {
+      return (
+        <div className="onboarding-banner new-user-banner info-box info-box-dismissible">
+          <p className="header">
+            <strong>New to Cypress?</strong>
+          </p>
+          <p>We've created some new user guides on key Cypress concepts to help you get started.</p>
+          <p className="action-links">
+            <a onClick={this._openHowToNewUserBanner}>How to write your first test <i className="fa fa-sm fa-external-link-alt" /></a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <a onClick={this._openIntroNewUserBanner}>Introduction guide to Cypress <i className="fa fa-sm fa-external-link-alt" /></a>
+          </p>
+          <button className="close" onClick={this._closeBanners}><span>&times;</span></button>
+        </div>
+      )
+    }
+
+    return null
+  }
+
+  _confirmRemoveScaffoldedFilesDialog = () => {
+    if (!this.props.project.newProjectBannerOpen) return null
+
+    return (
+      <BootstrapModal show={this.state.confirmRemoveScaffoldedFiles} onHide={this._closeRemoveScaffoldedFilesDialog} backdrop='static'>
+        <div className='modal-body confirm-remove-scaffolded-files'>
+          <BootstrapModal.Dismiss className='btn btn-link close'>&times;</BootstrapModal.Dismiss>
+          <h4>Are you sure that you want to delete all example spec files?</h4>
+          <h4 className="note">Note: this will not delete any new or edited files.</h4>
+        </div>
+        <div className='modal-footer'>
+          <BootstrapModal.Dismiss className='btn btn-link'>Cancel</BootstrapModal.Dismiss>
+          <button className='btn btn-danger' onClick={this._removeScaffoldedFiles}>Yes, delete files</button>
+        </div>
+      </BootstrapModal>
+    )
+  }
+
+  _newSpecNotification () {
+    return (
+      <Notification className='new-spec-warning' show={specsStore.showNewSpecWarning} onClose={specsStore.dismissNewSpecWarning}>
+        <i className='fas fa-exclamation-triangle' />
+        Your file has been successfully created.
+        However, since it was created outside of your integration folder or is not recognized as a spec file, it won't be visible in this list.
+      </Notification>
+    )
+  }
+
+  _openIntegrationFolder = () => {
     ipc.openFinder(this.props.project.integrationFolder)
   }
 

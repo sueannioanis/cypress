@@ -365,7 +365,7 @@ describe('lib/util/args', () => {
       this.obj = { config: { foo: 'bar' }, project: 'foo/bar' }
     })
 
-    it('rejects values which have an cooresponding underscore\'d key', function () {
+    it('rejects values which have an corresponding underscore\'d key', function () {
       expect(argsUtil.toArray(this.obj)).to.deep.eq([
         `--config=${JSON.stringify({ foo: 'bar' })}`,
         '--project=foo/bar',
@@ -404,7 +404,6 @@ describe('lib/util/args', () => {
       }
 
       this.obj = this.setup(
-        '--get-key',
         '--env=foo=bar,baz=quux,bar=foo=quz',
         '--config',
         `requestTimeout=1234,blockHosts=${s(this.blockHosts)},hosts=${s(this.hosts)}`,
@@ -425,9 +424,9 @@ describe('lib/util/args', () => {
         cwd,
         _: [],
         config: this.config,
-        getKey: true,
         invokedFromCli: false,
         spec: this.specs,
+        testingType: 'e2e',
       })
     })
 
@@ -447,17 +446,17 @@ describe('lib/util/args', () => {
       expect(args).to.deep.eq([
         `--config=${mergedConfig}`,
         `--cwd=${cwd}`,
-        '--getKey=true',
         `--spec=${JSON.stringify(this.specs)}`,
+        '--testingType=e2e',
       ])
 
       expect(argsUtil.toObject(args)).to.deep.eq({
         cwd,
         _: [],
-        getKey: true,
         invokedFromCli: true,
         config: this.config,
         spec: this.specs,
+        testingType: 'e2e',
       })
     })
 
@@ -469,6 +468,7 @@ describe('lib/util/args', () => {
         cwd,
         _: [],
         invokedFromCli: false,
+        testingType: 'e2e',
         config: {},
       })
     })
@@ -496,6 +496,7 @@ describe('lib/util/args', () => {
         appPath: '/Applications/Cypress.app',
         execPath: '/Applications/Cypress.app',
         invokedFromCli: false,
+        testingType: 'e2e',
         updating: true,
       })
     })
@@ -521,6 +522,7 @@ describe('lib/util/args', () => {
         appPath: 'a',
         execPath: 'e',
         invokedFromCli: false,
+        testingType: 'e2e',
         updating: true,
       })
     })

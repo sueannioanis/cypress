@@ -6,13 +6,16 @@ import _ from 'lodash'
 import os from 'os'
 import path from 'path'
 import extension from '@packages/extension'
+import mime from 'mime'
+import { launch } from '@packages/launcher'
+
 import appData from '../util/app_data'
-import fs from '../util/fs'
-import { CdpAutomation } from './cdp_automation'
+import { fs } from '../util/fs'
+import { CdpAutomation, screencastOpts } from './cdp_automation'
 import * as CriClient from './cri-client'
 import * as protocol from './protocol'
 import utils from './utils'
-import { Browser } from './types'
+import type { Browser } from './types'
 
 // TODO: this is defined in `cypress-npm-api` but there is currently no way to get there
 type CypressConfiguration = any
@@ -38,6 +41,8 @@ type ChromePreferences = {
 const pathToExtension = extension.getPathToExtension()
 const pathToTheme = extension.getPathToTheme()
 
+// Common Chrome Flags for Automation
+// https://github.com/GoogleChrome/chrome-launcher/blob/master/docs/chrome-flags-for-tools.md
 const DEFAULT_ARGS = [
   '--test-type',
   '--ignore-certificate-errors',
@@ -49,7 +54,6 @@ const DEFAULT_ARGS = [
   '--enable-fixed-layout',
   '--disable-popup-blocking',
   '--disable-password-generation',
-  '--disable-save-password-bubble',
   '--disable-single-click-autofill',
   '--disable-prompt-on-repos',
   '--disable-background-timer-throttling',
@@ -57,15 +61,14 @@ const DEFAULT_ARGS = [
   '--disable-renderer-throttling',
   '--disable-backgrounding-occluded-windows',
   '--disable-restore-session-state',
-  '--disable-translate',
   '--disable-new-profile-management',
   '--disable-new-avatar-menu',
   '--allow-insecure-localhost',
   '--reduce-security-for-testing',
   '--enable-automation',
+  '--disable-print-preview',
 
   '--disable-device-discovery-notifications',
-  '--disable-infobars',
 
   // https://github.com/cypress-io/cypress/issues/2376
   '--autoplay-policy=no-user-gesture-required',
@@ -86,10 +89,12 @@ const DEFAULT_ARGS = [
   // option enabled, it will time out some of our tests in circle
   // "--disable-background-networking"
   '--disable-web-resources',
-  '--safebrowsing-disable-auto-update',
   '--safebrowsing-disable-download-protection',
   '--disable-client-side-phishing-detection',
   '--disable-component-update',
+  // Simulate when chrome needs an update.
+  // This prevents an 'update' from displaying til the given date
+  `--simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT'`,
   '--disable-default-apps',
 
   // These flags are for webcam/WebRTC testing
@@ -172,12 +177,6 @@ const _writeChromePreferences = (userDir: string, originalPrefs: ChromePreferenc
   .return()
 }
 
-const getRemoteDebuggingPort = async () => {
-  const port = Number(process.env.CYPRESS_REMOTE_DEBUGGING_PORT)
-
-  return port || utils.getPort()
-}
-
 /**
  * Merge the different `--load-extension` arguments into one.
  *
@@ -239,19 +238,21 @@ const _disableRestorePagesPrompt = function (userDir) {
         return fs.outputJson(prefsPath, preferences)
       }
     }
+
+    return
   })
   .catch(() => { })
 }
 
 // After the browser has been opened, we can connect to
 // its remote interface via a websocket.
-const _connectToChromeRemoteInterface = function (port, onError) {
+const _connectToChromeRemoteInterface = function (port, onError, browserDisplayName) {
   // @ts-ignore
   la(check.userPort(port), 'expected port number to connect CRI to', port)
 
   debug('connecting to Chrome remote interface at random port %d', port)
 
-  return protocol.getWsTargetFor(port)
+  return protocol.getWsTargetFor(port, browserDisplayName)
   .then((wsUrl) => {
     debug('received wsUrl %s for port %d', wsUrl, port)
 
@@ -272,9 +273,7 @@ const _maybeRecordVideo = async function (client, options) {
     client.send('Page.screencastFrameAck', { sessionId: meta.sessionId })
   })
 
-  await client.send('Page.startScreencast', {
-    format: 'jpeg',
-  })
+  await client.send('Page.startScreencast', screencastOpts)
 
   return client
 }
@@ -294,9 +293,44 @@ const _navigateUsingCRI = async function (client, url) {
   await client.send('Page.navigate', { url })
 }
 
+const _handleDownloads = async function (client, dir, automation) {
+  await client.send('Page.enable')
+
+  client.on('Page.downloadWillBegin', (data) => {
+    const downloadItem = {
+      id: data.guid,
+      url: data.url,
+    }
+
+    const filename = data.suggestedFilename
+
+    if (filename) {
+      // @ts-ignore
+      downloadItem.filePath = path.join(dir, data.suggestedFilename)
+      // @ts-ignore
+      downloadItem.mime = mime.getType(data.suggestedFilename)
+    }
+
+    automation.push('create:download', downloadItem)
+  })
+
+  client.on('Page.downloadProgress', (data) => {
+    if (data.state !== 'completed') return
+
+    automation.push('complete:download', {
+      id: data.guid,
+    })
+  })
+
+  await client.send('Page.setDownloadBehavior', {
+    behavior: 'allow',
+    downloadPath: dir,
+  })
+}
+
 const _setAutomation = (client, automation) => {
   return automation.use(
-    CdpAutomation(client.send),
+    new CdpAutomation(client.send, client.on, automation),
   )
 }
 
@@ -316,6 +350,8 @@ export = {
   _maybeRecordVideo,
 
   _navigateUsingCRI,
+
+  _handleDownloads,
 
   _setAutomation,
 
@@ -339,6 +375,7 @@ export = {
 
     // copy the extension src to the extension dist
     await utils.copyExtension(pathToExtension, extensionDest)
+    await fs.chmod(extensionBg, 0o0644)
     await fs.writeFileAsync(extensionBg, str)
 
     return extensionDest
@@ -388,9 +425,13 @@ export = {
     if (isHeadless) {
       args.push('--headless')
 
-      // set the window size for headless to a better default
+      // set default headless size to 1280x720
       // https://github.com/cypress-io/cypress/issues/6210
       args.push('--window-size=1280,720')
+
+      // set default headless DPR to 1
+      // https://github.com/cypress-io/cypress/issues/17375
+      args.push('--force-device-scale-factor=1')
     }
 
     // force ipv4
@@ -407,7 +448,7 @@ export = {
     const userDir = utils.getProfileDir(browser, isTextTerminal)
 
     const [port, preferences] = await Bluebird.all([
-      getRemoteDebuggingPort(),
+      protocol.getRemoteDebuggingPort(),
       _getChromePreferences(userDir),
     ])
 
@@ -453,19 +494,22 @@ export = {
     // first allows us to connect the remote interface,
     // start video recording and then
     // we will load the actual page
-    const launchedBrowser = await utils.launch(browser, 'about:blank', args)
+    const launchedBrowser = await launch(browser, 'about:blank', args)
 
     la(launchedBrowser, 'did not get launched browser instance')
 
     // SECOND connect to the Chrome remote interface
     // and when the connection is ready
     // navigate to the actual url
-    const criClient = await this._connectToChromeRemoteInterface(port, options.onError)
+    const criClient = await this._connectToChromeRemoteInterface(port, options.onError, browser.displayName)
 
     la(criClient, 'expected Chrome remote interface reference', criClient)
 
     await criClient.ensureMinimumProtocolVersion('1.3')
     .catch((err) => {
+      // if this minumum chrome version changes, sync it with
+      // packages/web-config/webpack.config.base.ts and
+      // npm/webpack-batteries-included-preprocessor/index.js
       throw new Error(`Cypress requires at least Chrome 64.\n\nDetails:\n${err.message}`)
     })
 
@@ -474,6 +518,7 @@ export = {
     // monkey-patch the .kill method to that the CDP connection is closed
     const originalBrowserKill = launchedBrowser.kill
 
+    /* @ts-expect-error */
     launchedBrowser.kill = async (...args) => {
       debug('closing remote interface client')
 
@@ -485,6 +530,7 @@ export = {
 
     await this._maybeRecordVideo(criClient, options)
     await this._navigateUsingCRI(criClient, url)
+    await this._handleDownloads(criClient, options.downloadsFolder, automation)
 
     // return the launched browser process
     // with additional method to close the remote connection

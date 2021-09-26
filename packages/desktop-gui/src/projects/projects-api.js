@@ -102,7 +102,7 @@ const runSpec = (project, spec, browser, specFilter) => {
   .then(launchBrowser)
 }
 
-const closeBrowser = (project, spec) => {
+const onBrowserClose = (project, spec) => {
   if (!spec) {
     specsStore.setChosenSpec(null)
   }
@@ -112,6 +112,10 @@ const closeBrowser = (project, spec) => {
   }
 
   ipc.offLaunchBrowser()
+}
+
+const closeBrowser = (project, spec) => {
+  onBrowserClose(project, spec)
 
   return ipc.closeBrowser()
 }
@@ -127,10 +131,21 @@ const closeProject = (project) => {
   ipc.offOnProjectWarning()
   ipc.offOnConfigChanged()
 
-  return Promise.join(
-    closeBrowser(project),
+  return Promise.all([
+    onBrowserClose(project),
     ipc.closeProject(),
-  )
+  ])
+}
+
+const updateProjectStatus = (project) => {
+  return ipc.getProjectStatus(project.clientDetails())
+  .then((projectDetails) => {
+    project.update(projectDetails)
+  })
+  .catch(ipc.isUnauthed, ipc.handleUnauthed)
+  .catch((err) => {
+    project.setApiError(err)
+  })
 }
 
 const openProject = (project) => {
@@ -141,17 +156,6 @@ const openProject = (project) => {
     project.setError(err)
   }
 
-  const updateProjectStatus = () => {
-    return ipc.getProjectStatus(project.clientDetails())
-    .then((projectDetails) => {
-      project.update(projectDetails)
-    })
-    .catch(ipc.isUnauthed, ipc.handleUnauthed)
-    .catch((err) => {
-      project.setApiError(err)
-    })
-  }
-
   const updateConfig = (config) => {
     project.update({
       id: config.projectId,
@@ -160,10 +164,10 @@ const openProject = (project) => {
       ..._.pick(config, ['resolvedNodeVersion', 'resolvedNodePath']),
     })
 
-    project.update({ name: config.projectName })
     project.setOnBoardingConfig(config)
     project.setBrowsers(config.browsers)
     project.setResolvedConfig(config.resolved)
+    project.prompts.setPromptStates(config)
   }
 
   ipc.onFocusTests(() => {
@@ -195,9 +199,9 @@ const openProject = (project) => {
     project.setLoading(false)
     getSpecs(setProjectError)
 
-    projectPollingId = setInterval(updateProjectStatus, 10000)
+    projectPollingId = setInterval(() => updateProjectStatus(project), 10000)
 
-    return updateProjectStatus()
+    return updateProjectStatus(project)
   })
   .catch(setProjectError)
 }
@@ -238,6 +242,7 @@ const getRecordKeys = () => {
 
 export default {
   loadProjects,
+  updateProjectStatus,
   openProject,
   reopenProject,
   closeProject,

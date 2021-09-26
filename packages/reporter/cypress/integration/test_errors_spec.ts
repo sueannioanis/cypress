@@ -244,31 +244,13 @@ describe('test errors', () => {
       .get('.test-err-code-frame')
       .should('be.visible')
 
-      // ensure the page is loaded before taking snapshot
-      cy.get('.focus-tests-text').should('be.visible')
       cy.percySnapshot()
-    })
-
-    it('does not show code frame when not included on error', () => {
-      commandErr.codeFrame = undefined
-
-      cy
-      .get('.test-err-code-frame')
-      .should('not.exist')
     })
 
     it('use correct language class', () => {
       cy
       .get('.test-err-code-frame pre')
       .should('have.class', 'language-javascript')
-    })
-
-    it('falls back to text language class', () => {
-      // @ts-ignore
-      commandErr.codeFrame.language = null
-      cy
-      .get('.test-err-code-frame pre')
-      .should('have.class', 'language-text')
     })
 
     it('displays tooltip on hover', () => {
@@ -284,6 +266,44 @@ describe('test errors', () => {
         line: 2,
         column: 7,
       },
+    })
+  })
+
+  describe('code frames', () => {
+    it('does not show code frame when not included on error', () => {
+      commandErr.codeFrame = undefined
+      setError(commandErr)
+
+      cy
+      .get('.test-err-code-frame')
+      .should('not.exist')
+    })
+
+    it('falls back to text language class', () => {
+      // @ts-ignore
+      commandErr.codeFrame.language = null
+      setError(commandErr)
+      cy
+      .get('.test-err-code-frame pre')
+      .should('have.class', 'language-text')
+    })
+  })
+
+  describe('studio error', () => {
+    beforeEach(() => {
+      setError(runnablesWithErr)
+    })
+
+    it('is not visible by default', () => {
+      cy.get('.studio-err-wrapper').should('not.be.visible')
+    })
+
+    it('is visible when studio is active', () => {
+      runner.emit('reporter:start', { studioActive: true })
+
+      cy.get('.studio-err-wrapper').should('be.visible')
+
+      cy.percySnapshot()
     })
   })
 })

@@ -73,10 +73,6 @@ describe('src/cy/commands/navigation', () => {
       })
     })
 
-    it('sdfsdfdsf', function () {
-      $('sd')
-    })
-
     it('removes window:load listeners', () => {
       const listeners = cy.listeners('window:load')
 
@@ -712,6 +708,18 @@ describe('src/cy/commands/navigation', () => {
     // https://github.com/cypress-io/cypress/issues/1727
     it('can visit a page with undefined content type and html-shaped body', () => {
       cy.visit('http://localhost:3500/undefined-content-type')
+    })
+
+    // https://github.com/cypress-io/cypress/issues/14445
+    it('should eventually fail on assertion despite redirects', (done) => {
+      cy.on('fail', (err) => {
+        expect(err.message).to.contain('The application redirected to')
+
+        done()
+      })
+
+      cy.visit('fixtures/redirection-loop-a.html')
+      cy.get('div').should('contain', 'this should fail?')
     })
 
     describe('when only hashes are changing', () => {

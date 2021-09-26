@@ -4,9 +4,8 @@ const Promise = require('bluebird')
 const Fixtures = require('../support/helpers/fixtures')
 const e2e = require('../support/helpers/e2e').default
 let sizeOf = require('image-size')
-let fs = require('../../lib/util/fs')
+const { fs } = require('../../lib/util/fs')
 
-fs = Promise.promisifyAll(fs)
 sizeOf = Promise.promisify(sizeOf)
 
 const e2ePath = Fixtures.projectPath('e2e')
@@ -99,8 +98,8 @@ describe('e2e screenshots', () => {
           // make sure all of the values are unique
           expect(sizes).to.deep.eq(_.uniq(sizes))
 
-          // png1 should not be within 3k of png2
-          expect(sizes[0]).not.to.be.closeTo(sizes[1], 3000)
+          // png1 should not be within 1k of png2
+          expect(sizes[0]).not.to.be.closeTo(sizes[1], 1000)
         }).then(() => {
           return Promise.all([
             sizeOf(screenshot1),

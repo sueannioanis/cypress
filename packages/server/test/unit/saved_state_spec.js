@@ -2,7 +2,7 @@ require('../spec_helper')
 
 const path = require('path')
 const Promise = require('bluebird')
-const fs = require(`${root}lib/util/fs`)
+const { fs } = require(`${root}lib/util/fs`)
 const FileUtil = require(`${root}lib/util/file`)
 const appData = require(`${root}lib/util/app_data`)
 
@@ -59,6 +59,14 @@ describe('lib/saved_state', () => {
         const expected = path.join(appData.path(), 'projects', '__global__', 'state.json')
 
         expect(state.path).to.equal(expected)
+      })
+    })
+
+    it('has an empty state by default', () => {
+      return savedState.create()
+      .then((state) => state.get())
+      .then((state) => {
+        expect(state).to.be.empty
       })
     })
 

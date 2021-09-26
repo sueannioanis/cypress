@@ -115,8 +115,8 @@ const descriptions = {
   forceInstall: 'force install the Cypress binary',
   global: 'force Cypress into global mode as if its globally installed',
   group: 'a named group for recorded runs in the Cypress Dashboard',
-  headed: 'displays the browser instead of running headlessly (defaults to true for Firefox and Chromium-family browsers)',
-  headless: 'hide the browser instead of running headed (defaults to true for Electron)',
+  headed: 'displays the browser instead of running headlessly',
+  headless: 'hide the browser instead of running headed (default for cypress run)',
   key: 'your secret Record Key. you can omit this if you set a CYPRESS_RECORD_KEY environment variable.',
   parallel: 'enables concurrent runs and automatic load balancing of specs across multiple machines or processes',
   port: 'runs Cypress on a specific port. overrides any value in cypress.json.',
@@ -138,6 +138,8 @@ const knownCommands = [
   'install',
   'open',
   'run',
+  'open-ct',
+  'run-ct',
   'verify',
   '-v',
   '--version',
@@ -378,15 +380,6 @@ module.exports = {
       showVersions(args)
     })
 
-    addCypressRunCommand(program)
-    .action((...fnArgs) => {
-      debug('running Cypress with args %o', fnArgs)
-      require('./exec/run')
-      .start(parseVariableOpts(fnArgs, args))
-      .then(util.exit)
-      .catch(util.logErrorExit1)
-    })
-
     program
     .command('open')
     .usage('[options]')
@@ -404,6 +397,67 @@ module.exports = {
       debug('opening Cypress')
       require('./exec/open')
       .start(util.parseOpts(opts))
+      .catch(util.logErrorExit1)
+    })
+
+    addCypressRunCommand(program)
+    .action((...fnArgs) => {
+      debug('running Cypress with args %o', fnArgs)
+      require('./exec/run')
+      .start(parseVariableOpts(fnArgs, args))
+      .then(util.exit)
+      .catch(util.logErrorExit1)
+    })
+
+    program
+    .command('open-ct')
+    .usage('[options]')
+    .description('Opens Cypress component testing interactive mode.')
+    .option('-b, --browser <browser-path>', text('browserOpenMode'))
+    .option('-c, --config <config>', text('config'))
+    .option('-C, --config-file <config-file>', text('configFile'))
+    .option('-d, --detached [bool]', text('detached'), coerceFalse)
+    .option('-e, --env <env>', text('env'))
+    .option('--global', text('global'))
+    .option('-p, --port <port>', text('port'))
+    .option('-P, --project <project-path>', text('project'))
+    .option('--dev', text('dev'), coerceFalse)
+    .action((opts) => {
+      debug('opening Cypress')
+      require('./exec/open')
+      .start({ ...util.parseOpts(opts), testingType: 'component' })
+      .catch(util.logErrorExit1)
+    })
+
+    program
+    .command('run-ct')
+    .usage('[options]')
+    .description('Runs all Cypress Component Testing suites')
+    .option('-b, --browser <browser-name-or-path>', text('browserRunMode'))
+    .option('--ci-build-id <id>', text('ciBuildId'))
+    .option('-c, --config <config>', text('config'))
+    .option('-C, --config-file <config-file>', text('configFile'))
+    .option('-e, --env <env>', text('env'))
+    .option('--group <name>', text('group'))
+    .option('-k, --key <record-key>', text('key'))
+    .option('--headed', text('headed'))
+    .option('--headless', text('headless'))
+    .option('--no-exit', text('exit'))
+    .option('--parallel', text('parallel'))
+    .option('-p, --port <port>', text('port'))
+    .option('-P, --project <project-path>', text('project'))
+    .option('-q, --quiet', text('quiet'))
+    .option('--record [bool]', text('record'), coerceFalse)
+    .option('-r, --reporter <reporter>', text('reporter'))
+    .option('-o, --reporter-options <reporter-options>', text('reporterOptions'))
+    .option('-s, --spec <spec>', text('spec'))
+    .option('-t, --tag <tag>', text('tag'))
+    .option('--dev', text('dev'), coerceFalse)
+    .action((opts) => {
+      debug('running Cypress run-ct')
+      require('./exec/run')
+      .start({ ...util.parseOpts(opts), testingType: 'component' })
+      .then(util.exit)
       .catch(util.logErrorExit1)
     })
 

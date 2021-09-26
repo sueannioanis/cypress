@@ -10,6 +10,7 @@ import { CommandProps } from '../commands/command-model'
 import { AgentProps } from '../agents/agent-model'
 import { RouteProps } from '../routes/route-model'
 import { RunnablesStore, LogProps } from '../runnables/runnables-store'
+import { SessionProps } from '../sessions/sessions-model'
 
 export type TestState = 'active' | 'failed' | 'pending' | 'passed' | 'processing'
 
@@ -62,6 +63,10 @@ export default class Test extends Runnable {
       hookId: props.id.toString(),
       hookName: 'test body',
       invocationDetails: props.invocationDetails,
+    }, {
+      hookId: `${props.id.toString()}-studio`,
+      hookName: 'studio commands',
+      isStudio: true,
     }]
 
     _.each(props.prevAttempts || [], (attempt) => this._addAttempt(attempt))
@@ -115,19 +120,35 @@ export default class Test extends Runnable {
     return this.attempts.length - 1
   }
 
+  @computed get studioIsNotEmpty () {
+    return this._withAttempt(this.currentRetry, (attempt: Attempt) => {
+      return attempt.studioIsNotEmpty
+    })
+  }
+
   isLastAttempt (attemptModel: Attempt) {
     return this.lastAttempt === attemptModel
   }
 
   addLog = (props: LogProps) => {
-    return this._withAttempt(props.testCurrentRetry, (attempt: Attempt) => {
+    return this._withAttempt(props.testCurrentRetry || this.currentRetry, (attempt: Attempt) => {
       return attempt.addLog(props)
     })
   }
 
+  addSession (props: SessionProps) {
+    return this._withAttempt(props.testCurrentRetry, (attempt) => attempt._addSession(props))
+  }
+
   updateLog (props: LogProps) {
-    this._withAttempt(props.testCurrentRetry, (attempt: Attempt) => {
+    this._withAttempt(props.testCurrentRetry || this.currentRetry, (attempt: Attempt) => {
       attempt.updateLog(props)
+    })
+  }
+
+  removeLog (props: LogProps) {
+    this._withAttempt(props.testCurrentRetry || this.currentRetry, (attempt: Attempt) => {
+      attempt.removeLog(props)
     })
   }
 
@@ -150,6 +171,12 @@ export default class Test extends Runnable {
 
         return
       }
+    }
+
+    if (props.err || props.state) {
+      this._withAttempt(this.currentRetry, (attempt: Attempt) => {
+        attempt.update(props)
+      })
     }
 
     cb()

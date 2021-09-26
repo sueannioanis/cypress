@@ -794,7 +794,7 @@ describe('src/cy/commands/xhr', () => {
         this.logs = []
 
         cy.on('log:added', (attrs, log) => {
-          if (attrs.name === 'xhr') {
+          if (['xhr', 'request'].includes(attrs.name)) {
             this.lastLog = log
             this.logs.push(log)
           }
@@ -817,12 +817,14 @@ describe('src/cy/commands/xhr', () => {
 
             expect(lastLog.pick('name', 'displayName', 'event', 'alias', 'aliasType', 'state')).to.deep.eq({
               name: 'xhr',
-              displayName: 'xhr stub',
+              displayName: 'xhr',
               event: true,
               alias: 'getFoo',
               aliasType: 'route',
               state: 'pending',
             })
+
+            expect(lastLog.get('renderProps')()).to.include({ wentToOrigin: false })
 
             const snapshots = lastLog.get('snapshots')
 
@@ -846,12 +848,14 @@ describe('src/cy/commands/xhr', () => {
 
             expect(lastLog.pick('name', 'displayName', 'event', 'alias', 'aliasType', 'state')).to.deep.eq({
               name: 'xhr',
-              displayName: 'xhr stub',
+              displayName: 'xhr',
               event: true,
               alias: 'getFoo',
               aliasType: 'route',
               state: 'pending',
             })
+
+            expect(lastLog.get('renderProps')()).to.include({ wentToOrigin: false })
 
             const snapshots = lastLog.get('snapshots')
 
@@ -971,7 +975,7 @@ describe('src/cy/commands/xhr', () => {
         it('logs obj', function () {
           const obj = {
             name: 'xhr',
-            displayName: 'xhr stub',
+            displayName: 'xhr',
             event: true,
             message: '',
             type: 'parent',
@@ -1012,7 +1016,7 @@ describe('src/cy/commands/xhr', () => {
         this.logs = []
 
         cy.on('log:added', (attrs, log) => {
-          if (attrs.name === 'xhr') {
+          if (['xhr', 'request'].includes(attrs.name)) {
             this.lastLog = log
             this.logs.push(log)
           }
@@ -1022,21 +1026,25 @@ describe('src/cy/commands/xhr', () => {
       })
 
       it('sets err on log when caused by code errors', function (done) {
-        const uncaughtException = cy.stub().returns(true)
+        done = _.once(done)
+        cy.once('fail', (err) => {
+          // suppress failure
+        })
 
-        cy.on('uncaught:exception', uncaughtException)
-
-        cy.on('fail', (err) => {
+        cy.on('log:changed', () => {
           const { lastLog } = this
 
-          expect(this.logs.length).to.eq(1)
-          expect(lastLog.get('name')).to.eq('xhr')
-          expect(lastLog.get('error').message).contain('foo is not defined')
-          // since this is AUT code, we should allow error to be caught in 'uncaught:exception' hook
-          // https://github.com/cypress-io/cypress/issues/987
-          expect(uncaughtException).calledOnce
+          if (!lastLog || lastLog.get('name') !== 'request') return
 
-          done()
+          try {
+            expect(this.logs.length).to.eq(1)
+            expect(lastLog.get('error').message).contain('foo is not defined')
+
+            done()
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.log('assertion failure', err)
+          }
         })
 
         cy.window().then((win) => {
@@ -1050,17 +1058,27 @@ describe('src/cy/commands/xhr', () => {
       })
 
       it('causes errors caused by onreadystatechange callback function', function (done) {
+        done = _.once(done)
         const e = new Error('onreadystatechange caused this error')
 
-        cy.on('fail', (err) => {
+        cy.once('fail', (err) => {
+          // suppress failure
+        })
+
+        cy.on('log:changed', () => {
           const { lastLog } = this
 
-          expect(this.logs.length).to.eq(1)
-          expect(lastLog.get('name')).to.eq('xhr')
-          expect(err).to.eq(lastLog.get('error'))
-          expect(err).to.eq(e)
+          if (!lastLog || lastLog.get('name') !== 'request') return
 
-          done()
+          try {
+            expect(this.logs.length).to.eq(1)
+            expect(lastLog.get('name')).to.eq('request')
+            expect(e.message).to.include(lastLog.get('error').message)
+            done()
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.log('assertion failure', err)
+          }
         })
 
         cy
@@ -1210,7 +1228,7 @@ describe('src/cy/commands/xhr', () => {
           this.logs = []
 
           cy.on('log:added', (attrs, log) => {
-            if (attrs.name === 'xhr') {
+            if (['xhr', 'request'].includes(attrs.name)) {
               this.lastLog = log
               this.logs.push(log)
             }
@@ -1227,7 +1245,6 @@ describe('src/cy/commands/xhr', () => {
               alias: 'getFoo',
               aliasType: 'route',
               type: 'parent',
-              error: err,
               instrument: 'command',
               message: '',
               event: true,
@@ -1238,6 +1255,8 @@ describe('src/cy/commands/xhr', () => {
             _.each(obj, (value, key) => {
               expect(value).deep.eq(lastLog.get(key), `expected key: ${key} to eq value: ${value}`)
             })
+
+            expect(err.message).to.include(lastLog.get('error').message)
 
             done()
           })
@@ -1672,6 +1691,36 @@ describe('src/cy/commands/xhr', () => {
       })
     })
 
+    describe('matches pattern', () => {
+      const testMatchesPattern = (pattern, href, expectMatch) => {
+        return (done) => {
+          cy
+          .route(pattern).as('getFoo')
+          .window().then((win) => {
+            const xhr = new win.XMLHttpRequest
+
+            xhr.open('get', href)
+            xhr.send()
+          })
+
+          if (expectMatch) {
+            cy.wait('@getFoo').then(() => done())
+          } else {
+            cy.on('fail', (err) => {
+              expect(err.message).to.include('No request ever occurred.')
+              done()
+            })
+
+            cy.wait('@getFoo', { timeout: 50 })
+          }
+        }
+      }
+
+      it('without querystring', testMatchesPattern('/foo', '/foo', true))
+      it('does not match with querystring', testMatchesPattern('/foo', '/foo?abc', false))
+      it('with querystring and wildcard', testMatchesPattern('/foo*', '/foo?abc', true))
+    })
+
     describe('request response alias', () => {
       it('matches xhrs with lowercase methods', () => {
         cy
@@ -1727,7 +1776,7 @@ describe('src/cy/commands/xhr', () => {
           return null
         })
         .wait('@getFoo').then((xhr) => {
-          const log = cy.queue.logs({ name: 'xhr' })[0]
+          const log = cy.queue.logs({ name: 'request' })[0]
 
           expect(log.get('displayName')).to.eq('xhr')
           expect(log.get('alias')).to.eq('getFoo')
@@ -1950,7 +1999,7 @@ describe('src/cy/commands/xhr', () => {
           // route + window + xhr log === 3
           expect(this.logs.length).to.eq(3)
           expect(lastLog.get('name')).to.eq('xhr')
-          expect(err).to.eq(lastLog.get('error'))
+          expect(err.message).to.include(lastLog.get('error').message)
 
           done()
         })
@@ -2158,7 +2207,7 @@ describe('src/cy/commands/xhr', () => {
       this.logs = []
 
       cy.on('log:added', (attrs, log) => {
-        if (attrs.name === 'xhr') {
+        if (['xhr', 'request'].includes(attrs.name)) {
           this.lastLog = log
           this.logs.push(log)
         }
@@ -2325,16 +2374,16 @@ describe('src/cy/commands/xhr', () => {
         })
       })
 
-      it('says Stubbed: No when request isnt forced 404', function () {
-        expect(this.lastLog.invoke('consoleProps').Stubbed).to.eq('No')
+      it('no status when request isnt forced 404', function () {
+        expect(this.lastLog.invoke('consoleProps').Status).to.be.undefined
       })
 
       it('logs request + response headers', () => {
         cy.then(function () {
-          const consoleProps = this.lastLog.invoke('consoleProps')
-
-          expect(consoleProps.Request.headers).to.be.an('object')
-          expect(consoleProps.Response.headers).to.be.an('object')
+          cy.wrap(this).its('lastLog').invoke('invoke', 'consoleProps').should((consoleProps) => {
+            expect(consoleProps['Request Headers']).to.be.an('object')
+            expect(consoleProps['Response Headers']).to.be.an('object')
+          })
         })
       })
 
@@ -2342,26 +2391,28 @@ describe('src/cy/commands/xhr', () => {
         cy.then(function () {
           const { xhr } = cy.state('responses')[0]
 
-          const consoleProps = _.pick(this.lastLog.invoke('consoleProps'), 'Method', 'Status', 'URL', 'XHR')
+          cy.wrap(this).its('lastLog').invoke('invoke', 'consoleProps').should((consoleProps) => {
+            expect(consoleProps).to.include({
+              Method: 'GET',
+              URL: 'http://localhost:3500/fixtures/app.json',
+              'Request went to origin?': 'yes',
+              XHR: xhr.xhr,
+            })
 
-          expect(consoleProps).to.deep.eq({
-            Method: 'GET',
-            URL: 'http://localhost:3500/fixtures/app.json',
-            Status: '200 (OK)',
-            XHR: xhr.xhr,
+            expect(consoleProps['Response Status Code']).to.be.oneOf([200, 304])
           })
         })
       })
 
       it('logs response', () => {
         cy.then(function () {
-          const consoleProps = this.lastLog.invoke('consoleProps')
-
-          expect(consoleProps.Response.body).to.deep.eq({
-            some: 'json',
-            foo: {
-              bar: 'baz',
-            },
+          cy.wrap(this).its('lastLog').invoke('invoke', 'consoleProps').should((consoleProps) => {
+            expect(consoleProps['Response Body']).to.deep.eq({
+              some: 'json',
+              foo: {
+                bar: 'baz',
+              },
+            })
           })
         })
       })
@@ -2386,7 +2437,7 @@ describe('src/cy/commands/xhr', () => {
       this.logs = []
 
       cy.on('log:added', (attrs, log) => {
-        if (attrs.name === 'xhr') {
+        if (['xhr', 'request'].includes(attrs.name)) {
           this.lastLog = log
           this.logs.push(log)
         }
@@ -2519,7 +2570,7 @@ describe('src/cy/commands/xhr', () => {
       let log = null
 
       cy.on('log:changed', (attrs, l) => {
-        if (attrs.name === 'xhr') {
+        if (['xhr', 'request'].includes(attrs.name)) {
           if (!log) {
             log = l
           }
@@ -2533,15 +2584,17 @@ describe('src/cy/commands/xhr', () => {
 
         xhr.open('GET', '/timeout?ms=999')
         xhr.send()
-        xhr.abort()
+
+        // allow the request time to make it out of the browser so proxy logging has a chance to see it
+        requestAnimationFrame(() => xhr.abort())
 
         cy.wrap(null).should(() => {
           expect(log.get('state')).to.eq('failed')
-          expect(log.invoke('renderProps')).to.deep.eq({
-            message: 'GET (aborted) /timeout?ms=999',
-            indicator: 'aborted',
+          expect(log.invoke('renderProps')).to.include({
+            message: 'GET /timeout?ms=999',
           })
 
+          expect(log.get('error')).to.be.an('Error')
           expect(xhr.aborted).to.be.true
         })
       })
@@ -2552,7 +2605,7 @@ describe('src/cy/commands/xhr', () => {
       let log = null
 
       cy.on('log:changed', (attrs, l) => {
-        if (attrs.name === 'xhr') {
+        if (['xhr', 'request'].includes(attrs.name)) {
           if (!log) {
             log = l
           }
@@ -2581,7 +2634,7 @@ describe('src/cy/commands/xhr', () => {
       let log = null
 
       cy.on('log:changed', (attrs, l) => {
-        if (attrs.name === 'xhr') {
+        if (['xhr', 'request'].includes(attrs.name)) {
           if (!log) {
             log = l
           }

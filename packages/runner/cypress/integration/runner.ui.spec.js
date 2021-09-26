@@ -103,8 +103,8 @@ describe('src/cypress/runner', () => {
       runIsolatedCypress({})
       .then(shouldHaveTestResults(0, 0))
 
-      cy.contains('No tests found in your file').should('be.visible')
-      cy.get('.error-message p').invoke('text').should('eq', 'We could not detect any tests in the above file. Write some tests and re-run.')
+      cy.contains('No tests found.').should('be.visible')
+      cy.contains('p', 'Cypress could not detect tests in this file.').should('be.visible')
     })
 
     it('ends test before nested suite', () => {
@@ -308,6 +308,55 @@ describe('src/cypress/runner', () => {
 
       cy.wrap(result)
     })
+
+    it('file with empty suites only displays no tests found', () => {
+      runIsolatedCypress({
+        suites: {
+          'suite 1': {
+            suites: {
+              'suite 2': {},
+            },
+          },
+        },
+      }).then(() => {
+        cy.get('.reporter').contains('No tests found')
+      })
+    })
+  })
+
+  describe('runner header', () => {
+    context('viewport dropdown', () => {
+      it('shows on click', () => {
+        runIsolatedCypress({})
+        cy.get('.viewport-menu').should('not.be.visible')
+        cy.get('.viewport-info button').click()
+        cy.get('.viewport-menu').should('be.visible')
+
+        cy.percySnapshot()
+      })
+    })
+
+    context('selector playground', () => {
+      it('shows on click', () => {
+        runIsolatedCypress({})
+
+        cy.get('.selector-playground').should('not.be.visible')
+        cy.get('.selector-playground-toggle').click()
+        cy.get('.selector-playground').should('be.visible')
+
+        cy.percySnapshot()
+      })
+
+      it('closes on restart', () => {
+        runIsolatedCypress({})
+
+        cy.get('.selector-playground-toggle').click()
+        cy.get('.selector-playground').should('be.visible')
+
+        cy.get('.restart').click()
+        cy.get('.selector-playground').should('not.be.visible')
+      })
+    })
   })
 
   describe('reporter interaction', () => {
@@ -354,6 +403,45 @@ describe('src/cypress/runner', () => {
       })
 
       cy.get('.reporter').should('not.exist')
+    })
+  })
+
+  describe('inline spec list', () => {
+    it('changes spec interactively using the spec list', () => {
+      runIsolatedCypress(() => {}, {
+        config: {
+          env: {
+            CypressInternal_UseInlineSpecList: true,
+          },
+        },
+        stubOnSpecWindow: false,
+      })
+
+      cy.get('[data-cy="specs-list"]').get('span').contains('foo.spec.js').click()
+      // spec should be selected
+      cy.get('[data-cy="selected-spec"]').contains('foo.spec.js')
+      cy.get('.command-message-text').contains('expected foo to equal foo')
+      cy.get('[data-cy="selected-spec"]').should('have.attr', 'title', 'cypress/integration/inline-spec-list/foo.spec.js')
+
+      // change to a different spec, bar.spec.js, and verify it was correctly executed.
+      cy.get('[data-cy="specs-list"]').get('span').contains('bar.spec.js').as('bar.spec.js')
+      cy.get('@bar.spec.js').click()
+      // spec should be selected
+      cy.get('[data-cy="selected-spec"]').contains('bar.spec.js')
+      cy.get('.command-message-text').contains('expected bar to equal bar')
+      cy.get('[data-cy="selected-spec"]').should('have.attr', 'title', 'cypress/integration/inline-spec-list/bar.spec.js')
+
+      // runnable title is "bar (random_id=1127)"
+      // clicking the spec again should *not* re-run it
+      // verify by asserting the random number has not changed
+      cy.get('.runnable-title').contains('bar').then(($el) => {
+        // get the random number from "bar (random_id=1127)"
+        /* eslint-disable-next-line no-unused-vars */
+        const [_, randomId] = $el[0].textContent.match(/random_id=(.+?)\)/)
+
+        cy.get('@bar.spec.js').click()
+        cy.get('.runnable-title').contains('bar').should('have.text', `bar (random_id=${randomId})`)
+      })
     })
   })
 })

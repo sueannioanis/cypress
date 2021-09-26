@@ -16,6 +16,7 @@ fs = Promise.promisifyAll(fs)
  * If running as root on Linux, no-sandbox must be passed or Chrome will not start
  */
 const isSandboxNeeded = () => {
+  // eslint-disable-next-line no-restricted-properties
   return (os.platform() === 'linux') && (process.geteuid() === 0)
 }
 
@@ -128,10 +129,6 @@ module.exports = {
         }
       }
 
-      // max HTTP header size 8kb -> 1mb
-      // https://github.com/cypress-io/cypress/issues/76
-      argv.unshift(`--max-http-header-size=${1024 * 1024}`)
-
       debug('spawning %s with args', execPath, argv)
 
       if (debug.enabled) {
@@ -140,12 +137,12 @@ module.exports = {
       }
 
       return cp.spawn(execPath, argv, { stdio: 'inherit' })
-      .on('close', (code, errCode) => {
-        debug('electron closing %o', { code, errCode })
+      .on('close', (code, signal) => {
+        debug('electron closing %o', { code, signal })
 
-        if (code) {
-          debug('original command was')
-          debug(execPath, argv.join(' '))
+        if (signal) {
+          debug('electron exited with a signal, forcing code = 1 %o', { signal })
+          code = 1
         }
 
         if (cb) {

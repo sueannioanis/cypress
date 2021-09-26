@@ -73,7 +73,8 @@ describe('Login', function () {
 
       it('passes utm code when it triggers ipc "begin:auth"', function () {
         cy.then(function () {
-          expect(this.ipc.beginAuth).to.be.calledWith('Nav Login Button')
+          // we match nav in this test since the outer beforeEach initializes the modal from the navbar
+          expect(this.ipc.beginAuth).to.be.calledWith('Nav')
         })
       })
 
@@ -260,20 +261,6 @@ describe('Login', function () {
         cy.contains('a', 'Cypress Dashboard Service')
         .click().then(function () {
           expect(this.ipc.externalOpen).to.be.calledWith('https://on.cypress.io/dashboard')
-        })
-      })
-    })
-
-    describe('terms and privacy message', () => {
-      it('opens links to terms and privacy on click', function () {
-        cy.contains('a', 'Terms of Use')
-        .click().then(function () {
-          expect(this.ipc.externalOpen).to.be.calledWith('https://on.cypress.io/terms-of-use')
-        })
-
-        cy.contains('a', 'Privacy Policy')
-        .click().then(function () {
-          expect(this.ipc.externalOpen).to.be.calledWith('https://on.cypress.io/privacy-policy')
         })
       })
     })

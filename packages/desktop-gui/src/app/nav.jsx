@@ -9,6 +9,7 @@ import viewStore from '../lib/view-store'
 import ipc from '../lib/ipc'
 import { gravatarUrl } from '../lib/utils'
 import { Link, routes } from '../lib/routing'
+import DocsMenu from './docs-menu'
 
 @observer
 export default class Nav extends Component {
@@ -24,14 +25,10 @@ export default class Nav extends Component {
         <ul className='nav'>
           <li>
             <a onClick={this._openSupport} href='#'>
-              <i className='fas fa-question-circle'></i> Support
+              <i className='fas fa-question-circle' /> Support
             </a>
           </li>
-          <li>
-            <a onClick={this._openDocs} href='#'>
-              <i className='fas fa-graduation-cap'></i> Docs
-            </a>
-          </li>
+          <DocsMenu />
           {this._userStateButton()}
         </ul>
       </nav>
@@ -50,7 +47,7 @@ export default class Nav extends Component {
     if (appStore.isGlobalMode && project) {
       return (
         <Link to={routes.intro()}>
-          <i className='fas fa-chevron-left'></i> Back
+          <i className='fas fa-chevron-left' /> Back
         </Link>
       )
     }
@@ -58,7 +55,7 @@ export default class Nav extends Component {
     // global mode, on intro page
     return (
       <div className='logo'>
-        <img src={require('@cypress/icons/dist/logo/cypress-inverse.png')} />
+        <img src={require('@cypress/icons/dist/logo/cypress-inverse.png')} alt="Cypress" />
       </div>
     )
   }
@@ -113,7 +110,7 @@ export default class Nav extends Component {
 
     return (
       <span>
-        <i className='fas fa-sign-out-alt'></i>{' '}
+        <i className='fas fa-sign-out-alt' />{' '}
         Log Out
       </span>
     )
@@ -126,16 +123,17 @@ export default class Nav extends Component {
   }
 
   _showLogin () {
-    authStore.openLogin()
-  }
-
-  _openDocs (e) {
-    e.preventDefault()
-    ipc.externalOpen('https://on.cypress.io')
+    authStore.openLogin(null, 'Nav')
   }
 
   _openSupport (e) {
     e.preventDefault()
-    ipc.externalOpen('https://on.cypress.io/support')
+    ipc.externalOpen({
+      url: 'https://on.cypress.io/support',
+      params: {
+        utm_medium: 'Nav',
+        utm_campaign: 'Support',
+      },
+    })
   }
 }

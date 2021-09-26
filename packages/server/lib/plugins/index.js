@@ -4,6 +4,7 @@ const path = require('path')
 const debug = require('debug')('cypress:server:plugins')
 const resolve = require('resolve')
 const Promise = require('bluebird')
+const inspector = require('inspector')
 const errors = require('../errors')
 const util = require('./util')
 const pkg = require('@packages/root')
@@ -82,7 +83,11 @@ const init = (config, options) => {
     const childIndexFilename = path.join(__dirname, 'child', 'index.js')
     const childArguments = ['--file', pluginsFile, '--projectRoot', options.projectRoot]
     const childOptions = {
-      stdio: 'inherit',
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        NODE_OPTIONS: process.env.ORIGINAL_NODE_OPTIONS || '',
+      },
     }
 
     if (config.resolvedNodePath) {
@@ -91,7 +96,25 @@ const init = (config, options) => {
     }
 
     debug('forking to run %s', childIndexFilename)
+
+    if (inspector.url()) {
+      childOptions.execArgv = _.chain(process.execArgv.slice(0))
+      .remove('--inspect-brk')
+      .push(`--inspect=${process.debugPort + 1}`)
+      .value()
+    }
+
     pluginsProcess = cp.fork(childIndexFilename, childArguments, childOptions)
+
+    if (pluginsProcess.stdout && pluginsProcess.stderr) {
+      // manually pipe plugin stdout and stderr for dashboard capture
+      // @see https://github.com/cypress-io/cypress/issues/7434
+      pluginsProcess.stdout.on('data', (data) => process.stdout.write(data))
+      pluginsProcess.stderr.on('data', (data) => process.stderr.write(data))
+    } else {
+      debug('stdout and stderr not available on subprocess, the plugin launch should error')
+    }
+
     const ipc = util.wrapIpc(pluginsProcess)
 
     for (let handler of handlers) {
@@ -102,7 +125,14 @@ const init = (config, options) => {
       projectRoot: options.projectRoot,
       configFile: options.configFile,
       version: pkg.version,
+      testingType: options.testingType,
     })
+
+    // alphabetize config by keys
+    let orderedConfig = {}
+
+    Object.keys(config).sort().forEach((key) => orderedConfig[key] = config[key])
+    config = orderedConfig
 
     ipc.send('load', config)
 
@@ -122,7 +152,7 @@ const init = (config, options) => {
 
             // no argument is passed for cy.task()
             // This is necessary because undefined becomes null when it is sent through ipc.
-            if (args[1] === undefined) {
+            if (registration.event === 'task' && args[1] === undefined) {
               args[1] = {
                 __cypress_task_no_argument__: true,
               }

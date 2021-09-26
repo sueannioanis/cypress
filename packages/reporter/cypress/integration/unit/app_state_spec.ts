@@ -141,25 +141,14 @@ describe('app state', () => {
     })
   })
 
-  context('#setForcingGc', () => {
-    it('sets forcingGc', () => {
+  context('#setStudioActive', () => {
+    it('sets studioActive', () => {
       const instance = new AppState()
 
-      instance.setForcingGc(false)
-      expect(instance.forcingGc).to.be.false
-      instance.setForcingGc(true)
-      expect(instance.forcingGc).to.be.true
-    })
-  })
-
-  context('#setFirefoxGcInterval', () => {
-    it('sets forcingGc', () => {
-      const instance = new AppState()
-
-      instance.setFirefoxGcInterval(111)
-      expect(instance.firefoxGcInterval).to.eq(111)
-      instance.setFirefoxGcInterval(222)
-      expect(instance.firefoxGcInterval).to.eq(222)
+      instance.setStudioActive(true)
+      expect(instance.studioActive).to.eq(true)
+      instance.setStudioActive(false)
+      expect(instance.studioActive).to.eq(false)
     })
   })
 
@@ -210,6 +199,14 @@ describe('app state', () => {
       instance.pinnedSnapshotId = 'c4'
       instance.reset()
       expect(instance.pinnedSnapshotId).to.be.null
+    })
+
+    it('sets studioActive to false', () => {
+      const instance = new AppState()
+
+      instance.studioActive = true
+      instance.reset()
+      expect(instance.studioActive).to.be.false
     })
   })
 })

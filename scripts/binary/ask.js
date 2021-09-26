@@ -3,7 +3,6 @@ let fs = require('fs-extra')
 let glob = require('glob')
 const Promise = require('bluebird')
 const inquirer = require('inquirer')
-const path = require('path')
 
 glob = Promise.promisify(glob)
 
@@ -85,30 +84,12 @@ const getReleases = (releases) => {
   }]
 }
 
-const getNextVersion = function ({ version } = {}) {
-  if (!version) {
-    ({
-      version,
-    } = require(path.join(__dirname, '..', '..', 'package.json')))
-  }
-
-  const message = `Bump next version to...? (currently: ${version})`
-  const defaultVersion = function () {
-    const a = version.split('.')
-    let v = a[a.length - 1]
-
-    v = Number(v) + 1
-    a.splice(a.length - 1, 1, v)
-
-    return a.join('.')
-  }
-
-  return [{
-    name: 'nextVersion',
+const getEnsureVersion = () => {
+  return prompt([{
+    name: 'version',
     type: 'input',
-    message,
-    default: defaultVersion,
-  }]
+    message: 'Which version do you want to ensure?',
+  }])
 }
 
 const getVersions = (releases) => {
@@ -213,11 +194,6 @@ const whichBumpTask = () => {
   .get('task')
 }
 
-const nextVersion = (version) => {
-  return prompt(getNextVersion(version))
-  .get('nextVersion')
-}
-
 const toCommit = ({ version }) => {
   return prompt(getCommitVersion(version))
   .get('commit')
@@ -229,14 +205,13 @@ module.exports = {
   getPlatformQuestion,
   getQuestions,
   getReleases,
+  getEnsureVersion,
   getVersions,
   getBumpTasks,
   deployNewVersion,
-  nextVersion,
   whichZipFile,
   whichVersion,
   whichRelease,
   whichPlatform,
   whichBumpTask,
-
 }

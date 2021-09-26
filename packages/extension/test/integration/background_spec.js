@@ -14,6 +14,14 @@ const browser = {
       addListener () {},
     },
   },
+  downloads: {
+    onCreated: {
+      addListener () {},
+    },
+    onChanged: {
+      addListener () {},
+    },
+  },
   windows: {
     getLastFocused () {},
   },
@@ -101,14 +109,28 @@ describe('app/background', () => {
     this.httpSrv = http.createServer()
     this.server = socket.server(this.httpSrv, { path: '/__socket.io' })
 
-    return this.httpSrv.listen(PORT, done)
+    this.onConnect = (callback) => {
+      const client = background.connect(`http://localhost:${PORT}`, '/__socket.io')
+
+      client.on('connect', _.once(() => {
+        callback(client)
+      }))
+    }
+
+    this.stubEmit = (callback) => {
+      this.onConnect((client) => {
+        client.emit = _.once(callback)
+      })
+    }
+
+    this.httpSrv.listen(PORT, done)
   })
 
   afterEach(function (done) {
     this.server.close()
 
-    return this.httpSrv.close(() => {
-      return done()
+    this.httpSrv.close(() => {
+      done()
     })
   })
 
@@ -145,38 +167,115 @@ describe('app/background', () => {
     })
   })
 
-  context('onChanged', () => {
-    it('does not emit when cause is overwrite', (done) => {
+  context('cookies', () => {
+    it('onChanged does not emit when cause is overwrite', function (done) {
       const addListener = sinon.stub(browser.cookies.onChanged, 'addListener')
-      const client = background.connect(`http://localhost:${PORT}`, '/__socket.io')
 
-      sinon.spy(client, 'emit')
+      this.onConnect((client) => {
+        sinon.spy(client, 'emit')
 
-      return client.on('connect', _.once(() => {
         const fn = addListener.getCall(0).args[0]
 
         fn({ cause: 'overwrite' })
 
         expect(client.emit).not.to.be.calledWith('automation:push:request')
 
-        return done()
-      }))
+        done()
+      })
     })
 
-    it('emits \'automation:push:request\'', (done) => {
+    it('onChanged emits automation:push:request change:cookie', function (done) {
       const info = { cause: 'explicit', cookie: { name: 'foo', value: 'bar' } }
 
       sinon.stub(browser.cookies.onChanged, 'addListener').yieldsAsync(info)
-      const client = background.connect(`http://localhost:${PORT}`, '/__socket.io')
 
-      return client.on('connect', () => {
-        return client.emit = _.once((req, msg, data) => {
-          expect(req).to.eq('automation:push:request')
-          expect(msg).to.eq('change:cookie')
-          expect(data).to.deep.eq(info)
+      this.stubEmit((req, msg, data) => {
+        expect(req).to.eq('automation:push:request')
+        expect(msg).to.eq('change:cookie')
+        expect(data).to.deep.eq(info)
 
-          return done()
+        done()
+      })
+    })
+  })
+
+  context('downloads', () => {
+    it('onCreated emits automation:push:request create:download', function (done) {
+      const downloadItem = {
+        id: '1',
+        filename: '/path/to/download.csv',
+        mime: 'text/csv',
+        url: 'http://localhost:1234/download.csv',
+      }
+
+      sinon.stub(browser.downloads.onCreated, 'addListener').yieldsAsync(downloadItem)
+
+      this.stubEmit((req, msg, data) => {
+        expect(req).to.eq('automation:push:request')
+        expect(msg).to.eq('create:download')
+        expect(data).to.deep.eq({
+          id: `${downloadItem.id}`,
+          filePath: downloadItem.filename,
+          mime: downloadItem.mime,
+          url: downloadItem.url,
         })
+
+        done()
+      })
+    })
+
+    it('onChanged emits automation:push:request complete:download', function (done) {
+      const downloadDelta = {
+        id: '1',
+        state: {
+          current: 'complete',
+        },
+      }
+
+      sinon.stub(browser.downloads.onChanged, 'addListener').yieldsAsync(downloadDelta)
+
+      this.stubEmit((req, msg, data) => {
+        expect(req).to.eq('automation:push:request')
+        expect(msg).to.eq('complete:download')
+        expect(data).to.deep.eq({ id: `${downloadDelta.id}` })
+
+        done()
+      })
+    })
+
+    it('onChanged does not emit if state does not exist', function (done) {
+      const downloadDelta = {
+        id: '1',
+      }
+      const addListener = sinon.stub(browser.downloads.onChanged, 'addListener')
+
+      this.onConnect((client) => {
+        sinon.spy(client, 'emit')
+        addListener.getCall(0).args[0](downloadDelta)
+
+        expect(client.emit).not.to.be.calledWith('automation:push:request')
+
+        done()
+      })
+    })
+
+    it('onChanged does not emit if state.current is not "complete"', function (done) {
+      const downloadDelta = {
+        id: '1',
+        state: {
+          current: 'inprogress',
+        },
+      }
+      const addListener = sinon.stub(browser.downloads.onChanged, 'addListener')
+
+      this.onConnect((client) => {
+        sinon.spy(client, 'emit')
+
+        addListener.getCall(0).args[0](downloadDelta)
+
+        expect(client.emit).not.to.be.calledWith('automation:push:request')
+
+        done()
       })
     })
   })
@@ -416,23 +515,12 @@ describe('app/background', () => {
       beforeEach(() => {
         browser.runtime.lastError = { message: 'some error' }
 
-        sinon.stub(browser.cookies, 'getAll')
-        .withArgs({ domain: 'google.com' })
-        .resolves([
-          { name: 'session', value: 'key', path: '/', domain: 'google.com', secure: true, httpOnly: true, expirationDate: 123 },
-          { name: 'foo', value: 'bar', path: '/foo', domain: 'google.com', secure: false, httpOnly: false, expirationDate: 456 },
-        ])
-        .withArgs({ domain: 'should.throw' })
-        .resolves([
-          { name: 'shouldThrow', value: 'key', path: '/', domain: 'should.throw', secure: false, httpOnly: true, expirationDate: 123 },
-        ])
-        .withArgs({ domain: 'no.details' })
-        .resolves([
-          { name: 'shouldThrow', value: 'key', path: '/', domain: 'no.details', secure: false, httpOnly: true, expirationDate: 123 },
-        ])
-
         return sinon.stub(browser.cookies, 'remove')
-        .withArgs({ name: 'session', url: 'https://google.com/' })
+        .callsFake(function () {
+          // eslint-disable-next-line no-console
+          console.log('unstubbed browser.cookies.remove', ...arguments)
+        })
+        .withArgs({ url: 'https://google.com', name: 'foo' })
         .resolves(
           { name: 'session', url: 'https://google.com/', storeId: '123' },
         )
@@ -440,27 +528,37 @@ describe('app/background', () => {
         .resolves(
           { name: 'foo', url: 'https://google.com/foo', storeId: '123' },
         )
-        .withArgs({ name: 'noDetails', url: 'http://no.details/' })
+        .withArgs({ name: 'noDetails', url: 'http://no.details' })
         .resolves(null)
-        .withArgs({ name: 'shouldThrow', url: 'http://should.throw/' })
+        .withArgs({ name: 'shouldThrow', url: 'http://should.throw' })
         .rejects({ message: 'some error' })
       })
 
       it('resolves with array of removed cookies', function (done) {
+        const cookieArr = [{ domain: 'google.com', name: 'foo', secure: true }]
+
         this.socket.on('automation:response', (id, obj = {}) => {
           expect(id).to.eq(123)
-          expect(obj.response).to.deep.eq([
-            { name: 'session', value: 'key', path: '/', domain: 'google.com', secure: true, httpOnly: true, expirationDate: 123 },
-            { name: 'foo', value: 'bar', path: '/foo', domain: 'google.com', secure: false, httpOnly: false, expirationDate: 456 },
-          ])
+          expect(obj.response).to.deep.eq(cookieArr)
 
           return done()
         })
 
-        return this.server.emit('automation:request', 123, 'clear:cookies', { domain: 'google.com' })
+        return this.server.emit('automation:request', 123, 'clear:cookies', cookieArr)
       })
 
-      it('rejects with error thrown', function (done) {
+      it('rejects when no cookie.name', function (done) {
+        this.socket.on('automation:response', (id, obj = {}) => {
+          expect(id).to.eq(123)
+          expect(obj.__error).to.contain('did not include a name')
+
+          return done()
+        })
+
+        return this.server.emit('automation:request', 123, 'clear:cookies', [{ domain: 'should.throw' }])
+      })
+
+      it('rejects with error thrown in browser.cookies.remove', function (done) {
         this.socket.on('automation:response', (id, obj = {}) => {
           expect(id).to.eq(123)
           expect(obj.__error).to.eq('some error')
@@ -468,18 +566,20 @@ describe('app/background', () => {
           return done()
         })
 
-        return this.server.emit('automation:request', 123, 'clear:cookies', { domain: 'should.throw' })
+        return this.server.emit('automation:request', 123, 'clear:cookies', [{ domain: 'should.throw', name: 'shouldThrow' }])
       })
 
-      it('rejects when no details', function (done) {
+      it('doesnt fail when no found cookie', function (done) {
+        const cookieArr = [{ domain: 'no.details', name: 'noDetails' }]
+
         this.socket.on('automation:response', (id, obj = {}) => {
           expect(id).to.eq(123)
-          expect(obj.__error).to.eq(`Removing cookie failed for: ${JSON.stringify({ url: 'http://no.details/', name: 'shouldThrow' })}`)
+          expect(obj.response).to.deep.eq(cookieArr)
 
           return done()
         })
 
-        return this.server.emit('automation:request', 123, 'clear:cookies', { domain: 'no.details' })
+        return this.server.emit('automation:request', 123, 'clear:cookies', cookieArr)
       })
     })
 

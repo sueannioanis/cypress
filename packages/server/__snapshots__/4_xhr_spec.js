@@ -7,14 +7,14 @@ exports['e2e xhr / passes in global mode'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (xhr_spec.coffee)                                                          │
-  │ Searched:   cypress/integration/xhr_spec.coffee                                                │
+  │ Specs:      1 found (xhr_spec.js)                                                              │
+  │ Searched:   cypress/integration/xhr_spec.js                                                    │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  xhr_spec.coffee                                                                 (1 of 1)
+  Running:  xhr_spec.js                                                                     (1 of 1)
 
 
   xhrs
@@ -24,35 +24,34 @@ exports['e2e xhr / passes in global mode'] = `
     ✓ does not inject into json's contents from file server even requesting text/html
     ✓ works prior to visit
     ✓ can stub a 100kb response
-    ✓ spawns tasks with original NODE_OPTIONS
     server with 1 visit
       ✓ response body
       ✓ request body
       ✓ aborts
 
 
-  10 passing
+  9 passing
 
 
   (Results)
 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        10                                                                               │
-  │ Passing:      10                                                                               │
+  │ Tests:        9                                                                                │
+  │ Passing:      9                                                                                │
   │ Failing:      0                                                                                │
   │ Pending:      0                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  0                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     xhr_spec.coffee                                                                  │
+  │ Spec Ran:     xhr_spec.js                                                                      │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Video)
 
   -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/xhr_spec.coffee.mp4                 (X second)
+  -  Finished processing: /XXX/XXX/XXX/cypress/videos/xhr_spec.js.mp4                     (X second)
 
 
 ====================================================================================================
@@ -62,9 +61,9 @@ exports['e2e xhr / passes in global mode'] = `
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  xhr_spec.coffee                          XX:XX       10       10        -        -        - │
+  │ ✔  xhr_spec.js                              XX:XX        9        9        -        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✔  All specs passed!                        XX:XX       10       10        -        -        -  
+    ✔  All specs passed!                        XX:XX        9        9        -        -        -  
 
 
 `
@@ -78,14 +77,14 @@ exports['e2e xhr / passes through CLI'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (xhr_spec.coffee)                                                          │
-  │ Searched:   cypress/integration/xhr_spec.coffee                                                │
+  │ Specs:      1 found (xhr_spec.js)                                                              │
+  │ Searched:   cypress/integration/xhr_spec.js                                                    │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  xhr_spec.coffee                                                                 (1 of 1)
+  Running:  xhr_spec.js                                                                     (1 of 1)
 
 
   xhrs
@@ -95,35 +94,34 @@ exports['e2e xhr / passes through CLI'] = `
     ✓ does not inject into json's contents from file server even requesting text/html
     ✓ works prior to visit
     ✓ can stub a 100kb response
-    ✓ spawns tasks with original NODE_OPTIONS
     server with 1 visit
       ✓ response body
       ✓ request body
       ✓ aborts
 
 
-  10 passing
+  9 passing
 
 
   (Results)
 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        10                                                                               │
-  │ Passing:      10                                                                               │
+  │ Tests:        9                                                                                │
+  │ Passing:      9                                                                                │
   │ Failing:      0                                                                                │
   │ Pending:      0                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  0                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     xhr_spec.coffee                                                                  │
+  │ Spec Ran:     xhr_spec.js                                                                      │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Video)
 
   -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/xhr_spec.coffee.mp4                 (X second)
+  -  Finished processing: /XXX/XXX/XXX/cypress/videos/xhr_spec.js.mp4                     (X second)
 
 
 ====================================================================================================
@@ -133,9 +131,9 @@ exports['e2e xhr / passes through CLI'] = `
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  xhr_spec.coffee                          XX:XX       10       10        -        -        - │
+  │ ✔  xhr_spec.js                              XX:XX        9        9        -        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✔  All specs passed!                        XX:XX       10       10        -        -        -  
+    ✔  All specs passed!                        XX:XX        9        9        -        -        -  
 
 
 `

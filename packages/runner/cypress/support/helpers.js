@@ -105,7 +105,9 @@ function createCypress (defaultOptions = {}) {
       state: {},
       config: { video: false },
       onBeforeRun () {},
+      stubOnSpecWindow: true,
       visitUrl: 'http://localhost:3500/fixtures/dom.html',
+      visitSuccess: true,
     })
 
     return cy.visit('/fixtures/isolated-runner.html#/tests/cypress/fixtures/empty_spec.js')
@@ -218,26 +220,28 @@ function createCypress (defaultOptions = {}) {
         .callsFake(() => {
           autCypress = win.Cypress
 
-          cy.stub(autCypress, 'onSpecWindow').snapshot(enableStubSnapshots).log(false).callsFake((specWindow) => {
-            autCypress.onSpecWindow.restore()
+          if (opts.stubOnSpecWindow) {
+            cy.stub(autCypress, 'onSpecWindow').snapshot(enableStubSnapshots).log(false).callsFake((specWindow) => {
+              autCypress.onSpecWindow.restore()
 
-            opts.onBeforeRun({ specWindow, win, autCypress })
+              opts.onBeforeRun({ specWindow, win, autCypress })
 
-            const testsInOwnFile = _.isString(mochaTestsOrFile)
-            const relativeFile = testsInOwnFile ? mochaTestsOrFile : 'cypress/fixtures/empty_spec.js'
+              const testsInOwnFile = _.isString(mochaTestsOrFile)
+              const relativeFile = testsInOwnFile ? mochaTestsOrFile : 'cypress/fixtures/empty_spec.js'
 
-            autCypress.onSpecWindow(specWindow, [
-              {
-                absolute: relativeFile,
-                relative: relativeFile,
-                relativeUrl: `/__cypress/tests?p=${relativeFile}`,
-              },
-            ])
+              autCypress.onSpecWindow(specWindow, [
+                {
+                  absolute: relativeFile,
+                  relative: relativeFile,
+                  relativeUrl: `/__cypress/tests?p=${relativeFile}`,
+                },
+              ])
 
-            if (testsInOwnFile) return
+              if (testsInOwnFile) return
 
-            generateMochaTestsForWin(specWindow, mochaTestsOrFile)
-          })
+              generateMochaTestsForWin(specWindow, mochaTestsOrFile)
+            })
+          }
 
           cy.stub(autCypress, 'run').snapshot(enableStubSnapshots).log(false).callsFake(runIsolatedCypress)
         })
@@ -249,17 +253,22 @@ function createCypress (defaultOptions = {}) {
           cb(opts.state)
         })
 
+        .withArgs('backend:request', 'net')
+        .yieldsAsync({})
+
         .withArgs('backend:request', 'reset:server:state')
         .yieldsAsync({})
 
         .withArgs('backend:request', 'resolve:url')
         .yieldsAsync({ response: {
-          isOkStatusCode: true,
+          isOkStatusCode: opts.visitSuccess,
           isHtml: true,
           url: opts.visitUrl,
         } })
+        .withArgs('backend:request')
+        .yieldsAsync({})
 
-        .withArgs('set:runnables')
+        .withArgs('set:runnables:and:maybe:record:tests')
         .callsFake((...args) => {
           setRunnablesStub(...args)
           _.last(args)()
@@ -270,6 +279,9 @@ function createCypress (defaultOptions = {}) {
 
         .withArgs('automation:request')
         .yieldsAsync({ response: {} })
+
+        .withArgs('studio:init')
+        .yieldsAsync(_.defaultTo(opts.state.showedStudioModal, true))
 
         const c = _.extend({}, Cypress.config(), {
           isTextTerminal: false,
@@ -289,50 +301,10 @@ function createCypress (defaultOptions = {}) {
     })
   }
 
-  const createVerifyTest = (modifier) => {
-    return (title, opts, props) => {
-      if (!props) {
-        props = opts
-        opts = null
-      }
-
-      const verifyFn = props.verifyFn || verifyFailure
-
-      const args = _.compact([title, opts, () => {
-        return runIsolatedCypress(`cypress/fixtures/errors/${props.file}`, {
-          onBeforeRun ({ specWindow, win, autCypress }) {
-            specWindow.testToRun = title
-            specWindow.autWindow = win
-            specWindow.autCypress = autCypress
-
-            if (props.onBeforeRun) {
-              props.onBeforeRun({ specWindow, win })
-            }
-          },
-        })
-        .then(({ win }) => {
-          props.codeFrameText = props.codeFrameText || title
-          props.win = win
-          verifyFn(props)
-        })
-      }])
-
-  ;(modifier ? it[modifier] : it)(...args)
-    }
-  }
-
-  const verify = {
-    it: createVerifyTest(),
-  }
-
-  verify.it['only'] = createVerifyTest('only')
-  verify.it['skip'] = createVerifyTest('skip')
-
   return {
     runIsolatedCypress,
     snapshotMochaEvents,
     getAutCypress,
-    verify,
   }
 }
 
@@ -536,88 +508,6 @@ const getRunState = (Cypress) => {
   s.numLogs = Cypress.Log.countLogsByTests(s.tests)
 
   return _.cloneDeep(s)
-}
-
-const verifyFailure = (options) => {
-  const {
-    hasCodeFrame = true,
-    verifyOpenInIde = true,
-    column,
-    codeFrameText,
-    message,
-    stack,
-    file,
-    win,
-  } = options
-  let { regex, line } = options
-
-  regex = regex || new RegExp(`${file}:${line || '\\d+'}:${column}`)
-
-  const testOpenInIde = () => {
-    expect(win.runnerWs.emit.withArgs('open:file').lastCall.args[1].file).to.include(file)
-  }
-
-  win.runnerWs.emit.withArgs('get:user:editor')
-  .yields({
-    preferredOpener: {
-      id: 'foo-editor',
-      name: 'Foo',
-      openerId: 'foo-editor',
-      isOther: false,
-    },
-  })
-
-  win.runnerWs.emit.withArgs('open:file')
-
-  cy.contains('View stack trace').click()
-
-  _.each([].concat(message), (msg) => {
-    cy.get('.runnable-err-message')
-    .should('include.text', msg)
-
-    cy.get('.runnable-err-stack-trace')
-    .should('not.include.text', msg)
-  })
-
-  cy.get('.runnable-err-stack-trace')
-  .invoke('text')
-  .should('match', regex)
-
-  if (stack) {
-    _.each([].concat(stack), (stackLine) => {
-      cy.get('.runnable-err-stack-trace')
-      .should('include.text', stackLine)
-    })
-  }
-
-  cy.get('.runnable-err-stack-trace')
-  .should('not.include.text', '__stackReplacementMarker')
-
-  if (verifyOpenInIde) {
-    cy.contains('.runnable-err-stack-trace .runnable-err-file-path a', file)
-    .click('left')
-    .should(() => {
-      testOpenInIde()
-    })
-  }
-
-  if (!hasCodeFrame) return
-
-  cy
-  .get('.test-err-code-frame .runnable-err-file-path')
-  .invoke('text')
-  .should('match', regex)
-
-  cy.get('.test-err-code-frame pre span').should('include.text', codeFrameText)
-
-  if (verifyOpenInIde) {
-    cy.contains('.test-err-code-frame .runnable-err-file-path a', file)
-    .click()
-    .should(() => {
-      expect(win.runnerWs.emit.withArgs('open:file')).to.be.calledTwice
-      testOpenInIde()
-    })
-  }
 }
 
 module.exports = {

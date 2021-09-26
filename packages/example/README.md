@@ -1,4 +1,9 @@
-## Example
+
+## Scaffold config files 
+
+The `cypress/plugins/index.js`, `cypress/support/*` and `cypress/tsconfig.json` from this package are used for user scaffolding in `packages/server` and `npm/create-cypress-tests`. This configuration files are by default injected when user instals Cypress.
+
+## Examples
 
 This repo contains the source code for pushing out [https://example.cypress.io](https://example.cypress.io).
 
@@ -6,7 +11,7 @@ The actual example repo you're probably looking for is [the kitchen sink app her
 
 **THERE'S LIKELY NO REASON YOU NEED TO EDIT ANY OF THE CODE ON THIS REPO.**
 
-- Want to edit the `example` tests? -> edit it [here](https://github.com/cypress-io/cypress-example-kitchensink/blob/master/cypress/integration/examples) instead.
+- Want to edit the `example` tests? -> edit it [here](https://github.com/cypress-io/cypress-example-kitchensink/blob/master/cypress/integration) instead.
 - Want to edit the actual [https://example.cypress.io](https://example.cypress.io) website? edit it [here](https://github.com/cypress-io/cypress-example-kitchensink/tree/master/app) instead.
 
 ## Updating the `example` app

@@ -2,31 +2,28 @@ import _ from 'lodash'
 import { observable } from 'mobx'
 
 interface DefaultAppState {
-  forcingGc: boolean
-  firefoxGcInterval: number | null | undefined
   isPaused: boolean
   isRunning: boolean
   nextCommandName: string | null | undefined
   pinnedSnapshotId: number | string | null
+  studioActive: boolean
 }
 
 const defaults: DefaultAppState = {
-  forcingGc: false,
-  firefoxGcInterval: undefined,
   isPaused: false,
   isRunning: false,
   nextCommandName: null,
   pinnedSnapshotId: null,
+  studioActive: false,
 }
 
 class AppState {
   @observable autoScrollingEnabled = true
-  @observable forcingGc = defaults.forcingGc
   @observable isPaused = defaults.isPaused
   @observable isRunning = defaults.isRunning
   @observable nextCommandName = defaults.nextCommandName
   @observable pinnedSnapshotId = defaults.pinnedSnapshotId
-  @observable firefoxGcInterval = defaults.firefoxGcInterval
+  @observable studioActive = defaults.studioActive
 
   isStopped = false;
   _resetAutoScrollingEnabledTo = true;
@@ -56,14 +53,6 @@ class AppState {
     this._resetAutoScrolling()
   }
 
-  setForcingGc (forcingGc: boolean) {
-    this.forcingGc = forcingGc
-  }
-
-  setFirefoxGcInterval (firefoxGcInterval: DefaultAppState['firefoxGcInterval']) {
-    this.firefoxGcInterval = firefoxGcInterval
-  }
-
   temporarilySetAutoScrolling (isEnabled?: boolean | null) {
     if (isEnabled != null) {
       this.autoScrollingEnabled = isEnabled
@@ -79,6 +68,10 @@ class AppState {
       this._resetAutoScrollingEnabledTo = isEnabled
       this.autoScrollingEnabled = isEnabled
     }
+  }
+
+  setStudioActive (studioActive: boolean) {
+    this.studioActive = studioActive
   }
 
   reset () {

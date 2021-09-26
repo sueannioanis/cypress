@@ -1,7 +1,5 @@
 const { $, dom } = Cypress
 
-export {}
-
 describe('src/cypress/dom/visibility', () => {
   beforeEach(() => {
     cy.visit('/fixtures/generic.html')
@@ -312,8 +310,8 @@ describe('src/cypress/dom/visibility', () => {
 `)
 
       this.$parentPointerEventsNone = add(`\
-<div style="pointer-events: none;">
-  <span style="position: fixed; top: 20px;">parent pointer-events: none</span>
+<div style="pointer-events: none">
+  <span style="position: fixed; left: 0; top: 50%;">parent pointer-events: none</span>
 </div>\
 `)
 
@@ -779,6 +777,11 @@ describe('src/cypress/dom/visibility', () => {
       it('is visible if pointer-events: none and parent has position: fixed', function () {
         expect(this.$childPointerEventsNone.find('span')).to.be.visible
         expect(this.$childPointerEventsNone.find('span')).to.not.be.hidden
+      })
+
+      it('is visible when position: sticky', () => {
+        cy.visit('fixtures/sticky.html')
+        cy.get('#button').should('be.visible')
       })
     })
 

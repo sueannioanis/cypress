@@ -24,9 +24,11 @@ describe('Specs List', function () {
       cy.stub(this.ipc, 'openFinder')
       cy.stub(this.ipc, 'openFile')
       cy.stub(this.ipc, 'externalOpen')
-      cy.stub(this.ipc, 'onboardingClosed')
+      cy.stub(this.ipc, 'hasOpenedCypress').resolves(true)
       cy.stub(this.ipc, 'onSpecChanged')
       cy.stub(this.ipc, 'setUserEditor')
+      cy.stub(this.ipc, 'showNewSpecDialog').resolves({ specs: null, path: null })
+      cy.stub(this.ipc, 'removeScaffoldedFiles').resolves()
 
       this.openProject = this.util.deferred()
       cy.stub(this.ipc, 'openProject').returns(this.openProject.promise)
@@ -57,8 +59,10 @@ describe('Specs List', function () {
       })
     })
 
-    it('displays help link', () => {
-      cy.contains('a', 'Need help?')
+    it('launches system save dialog on click of new spec file', function () {
+      cy.contains('New Spec File').click().then(function () {
+        expect(this.ipc.showNewSpecDialog).to.be.called
+      })
     })
 
     it('opens link to docs on click of help link', () => {
@@ -95,73 +99,77 @@ describe('Specs List', function () {
     })
   })
 
-  describe('first time onboarding specs', function () {
+  describe('new project onboarding', function () {
     beforeEach(function () {
       this.config.isNewProject = true
 
       this.openProject.resolve(this.config)
     })
 
-    it('displays modal', () => {
-      cy.contains('.modal', 'To help you get started').should('be.visible')
-      cy.percySnapshot()
-    })
+    context('banner', function () {
+      it('displays', function () {
+        cy.get('.new-project-banner')
+        cy.percySnapshot()
+      })
 
-    it('displays the scaffolded files', () => {
-      cy.get('.folder-preview-onboarding').within(function () {
-        cy.contains('span', 'fixtures').siblings('ul').within(function () {})
-        cy.contains('example.json')
-        cy.contains('span', 'integration').siblings('ul').within(() => {
-          cy.contains('examples')
+      it('is dismissable', function () {
+        cy.get('.new-project-banner').find('.close').click()
+        cy.get('.new-project-banner').should('not.exist')
+      })
+
+      it('does not display new user banner even when closed', function () {
+        this.ipc.hasOpenedCypress.resolves(false)
+
+        cy.get('.new-user-banner').should('not.exist')
+        cy.get('.new-project-banner').find('.close').click()
+        cy.get('.new-project-banner').should('not.exist')
+        cy.get('.new-user-banner').should('not.exist')
+      })
+
+      it('opens link to docs on click of help link', function () {
+        cy.contains('a', 'How to write your first test').click().then(function () {
+          expect(this.ipc.externalOpen).to.be.calledWithMatch({ url: 'https://on.cypress.io/writing-first-test' })
         })
+      })
 
-        cy.contains('span', 'support').siblings('ul').within(function () {
-          cy.contains('commands.js')
-          cy.contains('defaults.js')
-
-          cy.contains('index.js')
-        })
-
-        cy.contains('span', 'plugins').siblings('ul').within(() => {
-          cy.contains('index.js')
+      it('removes scaffolded files on click and confirmation', function () {
+        cy.contains('delete example files').click()
+        cy.get('.confirm-remove-scaffolded-files').should('be.visible')
+        cy.contains('Yes, delete files').click().then(function () {
+          expect(this.ipc.removeScaffoldedFiles).to.be.called
+          cy.get('.new-project-banner').should('not.exist')
         })
       })
     })
+  })
 
-    it('lists folders and files alphabetically', () => {
-      cy.get('.folder-preview-onboarding').within(() => {
-        cy.contains('fixtures').parent().next()
-        .contains('integration')
-      })
+  describe('first time user in existing project', function () {
+    beforeEach(function () {
+      this.openProject.resolve(this.config)
+      this.ipc.hasOpenedCypress.resolves(false)
     })
 
-    it('truncates file lists with more than 3 items', () => {
-      cy.get('.folder-preview-onboarding').within(function () {
-        cy.contains('examples').closest('.new-item').find('li')
-        .should('have.length', 3)
-
-        cy.get('.is-more').should('have.text', ' ... 17 more files ...')
+    context('banner', function () {
+      it('displays', function () {
+        cy.get('.new-user-banner')
+        cy.percySnapshot()
       })
-    })
 
-    it('can dismiss the modal', function () {
-      cy.contains('OK, got it!').click()
-
-      cy.get('.modal').should('not.be.visible')
-      .then(function () {
-        expect(this.ipc.onboardingClosed).to.be.called
+      it('is dismissable', function () {
+        cy.get('.new-user-banner').find('.close').click()
+        cy.get('.new-user-banner').should('not.exist')
       })
-    })
 
-    it('triggers open:finder on click of example folder', function () {
-      cy.get('.modal').contains('examples').click().then(() => {
-        expect(this.ipc.openFinder).to.be.calledWith(this.config.integrationExamplePath)
+      it('opens link to docs on click of how to link', function () {
+        cy.contains('a', 'How to write your first test').click().then(function () {
+          expect(this.ipc.externalOpen).to.be.calledWithMatch({ url: 'https://on.cypress.io/writing-first-test' })
+        })
       })
-    })
 
-    it('triggers open:finder on click of text folder', function () {
-      cy.get('.modal').contains('cypress/integration').click().then(() => {
-        expect(this.ipc.openFinder).to.be.calledWith(this.config.integrationFolder)
+      it('opens link to intro guide on click of intro link', function () {
+        cy.contains('a', 'Introduction guide to Cypress').click().then(function () {
+          expect(this.ipc.externalOpen).to.be.calledWithMatch({ url: 'https://on.cypress.io/intro-to-cypress' })
+        })
       })
     })
   })
@@ -183,6 +191,20 @@ describe('Specs List', function () {
           cy.get('.file .file-name-wrapper').last().should('contain', 'last_list_spec.coffee')
           cy.get('.file .file-name-wrapper').last().should('not.contain', 'admin_users')
         })
+
+        it('sets focus on search files filters if user presses Cmd + F', () => {
+          if (Cypress.platform === 'darwin') {
+            cy.get('.filter').type('{cmd}F')
+            cy.get('.filter').should('have.focus')
+          }
+        })
+
+        it('sets focus on search files filter if user presses Ctrl + F', () => {
+          if (Cypress.platform !== 'darwin') {
+            cy.get('.filter').type('{ctrl}F')
+            cy.get('.filter').should('have.focus')
+          }
+        })
       })
     })
 
@@ -194,7 +216,7 @@ describe('Specs List', function () {
       })
 
       context('run all specs', function () {
-        const runAllIntegrationSpecsLabel = 'Run 5 integration specs'
+        const runAllIntegrationSpecsLabel = 'Run 7 integration specs'
 
         it('displays run all specs button', () => {
           cy.contains('.all-tests', runAllIntegrationSpecsLabel)
@@ -266,7 +288,7 @@ describe('Specs List', function () {
           .find('li').first().should('contain', 'accounts')
 
           cy.get('.list-as-table.integration')
-          .find('li').last().should('contain', 'app_spec')
+          .find('li').last().should('contain', '123_spec')
         })
       })
 
@@ -301,31 +323,31 @@ describe('Specs List', function () {
           cy.get('.file').should('have.length', this.numSpecs)
 
           cy.get(lastExpandedFolderSelector).click()
+          cy.get('.file').should('have.length', 9)
+
+          cy.get(lastExpandedFolderSelector).click()
+          cy.get('.file').should('have.length', 9)
+
+          cy.get(lastExpandedFolderSelector).click()
+          cy.get('.file').should('have.length', 7)
+
+          cy.get(lastExpandedFolderSelector).click()
           cy.get('.file').should('have.length', 7)
 
           cy.get(lastExpandedFolderSelector).click()
           cy.get('.file').should('have.length', 7)
 
           cy.get(lastExpandedFolderSelector).click()
-          cy.get('.file').should('have.length', 5)
+          cy.get('.file').should('have.length', 7)
+
+          cy.get(lastExpandedFolderSelector).click()
+          cy.get('.file').should('have.length', 6)
 
           cy.get(lastExpandedFolderSelector).click()
           cy.get('.file').should('have.length', 5)
-
-          cy.get(lastExpandedFolderSelector).click()
-          cy.get('.file').should('have.length', 5)
-
-          cy.get(lastExpandedFolderSelector).click()
-          cy.get('.file').should('have.length', 5)
-
-          cy.get(lastExpandedFolderSelector).click()
-          cy.get('.file').should('have.length', 4)
 
           cy.get(lastExpandedFolderSelector).click()
           cy.get('.file').should('have.length', 3)
-
-          cy.get(lastExpandedFolderSelector).click()
-          cy.get('.file').should('have.length', 1)
 
           cy.get(lastExpandedFolderSelector).click()
           cy.get('.file').should('have.length', 0)
@@ -387,6 +409,18 @@ describe('Specs List', function () {
           cy.get('.folder-expanded').should('have.length', 10)
           cy.get('.folder-collapsed').should('have.length', 0)
         })
+
+        it('folders toggle expand & collapse with spacebar/enter keys', () => {
+          cy.get('.folder-name').first().focus().type('{enter}')
+          cy.get('.folder').first().should('have.class', 'folder-collapsed')
+          cy.get('.folder-name').first().focus().type('{enter}')
+          cy.get('.folder').first().should('have.class', 'folder-expanded')
+
+          cy.get('.folder-name').first().trigger('keydown', { keyCode: 32 })
+          cy.get('.folder').first().should('have.class', 'folder-collapsed')
+          cy.get('.folder-name').first().trigger('keydown', { keyCode: 32 })
+          cy.get('.folder').first().should('have.class', 'folder-expanded')
+        })
       })
 
       describe('without folders', function () {
@@ -424,9 +458,17 @@ describe('Specs List', function () {
       })
 
       describe('typing the filter', function () {
-        const runAllIntegrationSpecsLabel = 'Run 5 integration specs'
+        const runAllIntegrationSpecsLabel = 'Run 8 integration specs'
 
         beforeEach(function () {
+          this.specs.integration.push({
+            name: 'a-b_c/d~e(f)g.spec.js',
+            absolute: '/user/project/cypress/integration/a-b_c/d~e(f)g.spec.js',
+            relative: 'cypress/integration/a-b_c/d~e(f)g.spec.js',
+          })
+
+          this.numSpecs = 16
+
           this.ipc.getSpecs.yields(null, this.specs)
           this.openProject.resolve(this.config)
 
@@ -452,6 +494,38 @@ describe('Specs List', function () {
         it('only shows matching folders', () => {
           cy.get('.specs-list .folder')
           .should('have.length', 2)
+        })
+
+        it('ignores non-letter characters', function () {
+          cy.get('.filter').clear().type('appspec')
+
+          cy.get('.specs-list .file')
+          .should('have.length', 1)
+          .and('contain', 'app_spec.coffee')
+        })
+
+        it('ignores non-number characters', function () {
+          cy.get('.filter').clear().type('123spec')
+
+          cy.get('.specs-list .file')
+          .should('have.length', 1)
+          .and('contain', '123_spec.coffee')
+        })
+
+        it('ignores commonly used path characters', function () {
+          cy.get('.filter').clear().type('abcdefg')
+
+          cy.get('.specs-list .file')
+          .should('have.length', 1)
+          .and('contain', 'd~e(f)g.spec.js')
+        })
+
+        it('treats non-Latin characters as letters', function () {
+          cy.get('.filter').clear().type('日本語')
+
+          cy.get('.specs-list .file')
+          .should('have.length', 1)
+          .and('contain', '日本語_spec.coffee')
         })
 
         it('clears the filter on clear button click', function () {
@@ -481,6 +555,7 @@ describe('Specs List', function () {
           cy.get('.specs-list').should('not.exist')
 
           cy.get('.empty-well').should('contain', 'No specs match your search: "foobarbaz"')
+          cy.percySnapshot()
         })
 
         it('removes run all tests buttons if no results', function () {
@@ -526,7 +601,7 @@ describe('Specs List', function () {
 
           // but once the project stops running tests, the button gets updated
           cy.get('.close-browser').click()
-          cy.contains('.all-tests', 'Run 5 integration specs')
+          cy.contains('.all-tests', runAllIntegrationSpecsLabel)
           .should('not.have.class', 'active')
         })
       })
@@ -698,7 +773,7 @@ describe('Specs List', function () {
       it('shows separate run specs buttons', function () {
         cy.get('.all-tests').should('have.length', 2)
         cy.contains('.folder-name', 'integration tests')
-        .contains('.all-tests', 'Run 5 integration specs')
+        .contains('.all-tests', 'Run 7 integration specs')
 
         cy.contains('.folder-name', 'component tests')
         .contains('.all-tests', 'Run 8 component specs')
@@ -735,7 +810,7 @@ describe('Specs List', function () {
 
         cy.log('**clearing the search**')
         cy.get('.filter').clear()
-        cy.contains('.all-tests', 'Run 5 integration specs')
+        cy.contains('.all-tests', 'Run 7 integration specs')
         cy.contains('.all-tests', 'Run 8 component specs')
       })
     })
@@ -808,7 +883,21 @@ describe('Specs List', function () {
     })
 
     it('displays when spec is hovered over', function () {
-      cy.get('@button').invoke('show').should('be.visible')
+      cy.get('@spec').realHover()
+      cy.get('@button').should('be.visible')
+
+      // invoke show for snapshot since hover doesn't do it
+      cy.get('@button').invoke('show')
+      cy.percySnapshot()
+    })
+
+    it('displays when spec is active and hovered over', function () {
+      cy.get('@spec').click().should('have.class', 'active')
+
+      cy.get('@spec').realHover()
+      cy.get('@button').should('be.visible')
+
+      cy.get('@button').invoke('show')
       cy.percySnapshot()
     })
 
@@ -823,7 +912,7 @@ describe('Specs List', function () {
           { id: 'other', name: 'Other', isOther: true, openerId: '' },
         ]
 
-        cy.get('@button').invoke('show')
+        cy.get('@spec').realHover()
       })
 
       context('when user has not already set opener and opens file', function () {
@@ -930,6 +1019,146 @@ describe('Specs List', function () {
               column: 0,
             })
           })
+        })
+      })
+    })
+  })
+
+  describe('new spec file', function () {
+    beforeEach(function () {
+      this.openProject.resolve(this.config)
+    })
+
+    it('launches system save dialog', function () {
+      cy.contains('New Spec File').click().then(function () {
+        expect(this.ipc.showNewSpecDialog).to.be.called
+      })
+    })
+
+    context('POSIX paths', function () {
+      context('when file is created within project path', function () {
+        beforeEach(function () {
+          this.newSpec = {
+            name: 'new_spec.js',
+            absolute: '/user/project/cypress/integration/new_spec.js',
+            relative: 'cypress/integration/new_spec.js',
+          }
+
+          this.ipc.showNewSpecDialog.resolves({
+            specs: { ...this.specs, integration: this.specs.integration.concat(this.newSpec) },
+            path: this.newSpec.absolute,
+          })
+        })
+
+        it('adds and highlights new spec item', function () {
+          cy.contains('New Spec File').click()
+          cy.contains('new_spec.js').closest('.file').should('have.class', 'new-spec')
+        })
+
+        it('scrolls the new spec item into view', function () {
+          cy.contains('New Spec File').click()
+          cy.contains('new_spec.js').closest('.file').then(function ($el) {
+            cy.stub($el[0], 'scrollIntoView')
+            cy.contains('New Spec File').click()
+            cy.wrap($el[0].scrollIntoView).should('be.called')
+          })
+        })
+
+        it('does not display warning message', function () {
+          cy.contains('New Spec File').click()
+          cy.contains('Your file has been successfully created').should('not.be.visible')
+        })
+      })
+
+      context('when file is created outside of project path', function () {
+        beforeEach(function () {
+          this.newSpec = {
+            name: 'new_spec.js',
+            absolute: '/user/desktop/my_folder/new_spec.js',
+          }
+
+          this.ipc.showNewSpecDialog.resolves({
+            specs: this.specs,
+            path: this.newSpec.absolute,
+          })
+        })
+
+        it('displays a dismissable warning message', function () {
+          cy.contains('New Spec File').click()
+
+          cy.contains('Your file has been successfully created')
+          .should('be.visible')
+          .closest('.notification-wrap')
+          .find('.notification-close')
+          .click()
+
+          cy.contains('Your file has been successfully created').should('not.be.visible')
+        })
+      })
+    })
+
+    context('Windows paths', function () {
+      beforeEach(function () {
+        this.ipc.getSpecs.yields(null, this.specsWindows)
+      })
+
+      context('when file is created within project path', function () {
+        beforeEach(function () {
+          this.newSpec = {
+            name: 'new_spec.js',
+            absolute: 'C:\\Users\\user\\project\\cypress\\integration\\new_spec.js',
+            relative: 'cypress\\integration\\new_spec.js',
+          }
+
+          this.ipc.showNewSpecDialog.resolves({
+            specs: { ...this.specsWindows, integration: this.specs.integration.concat(this.newSpec) },
+            path: this.newSpec.absolute,
+          })
+        })
+
+        it('adds and highlights new spec item', function () {
+          cy.contains('New Spec File').click()
+          cy.contains('new_spec.js').closest('.file').should('have.class', 'new-spec')
+        })
+
+        it('scrolls the new spec item into view', function () {
+          cy.contains('New Spec File').click()
+          cy.contains('new_spec.js').closest('.file').then(function ($el) {
+            cy.stub($el[0], 'scrollIntoView')
+            cy.contains('New Spec File').click()
+            cy.wrap($el[0].scrollIntoView).should('be.called')
+          })
+        })
+
+        it('does not display warning message', function () {
+          cy.contains('New Spec File').click()
+          cy.contains('Your file has been successfully created').should('not.be.visible')
+        })
+      })
+
+      context('when file is created outside of project path', function () {
+        beforeEach(function () {
+          this.newSpec = {
+            name: 'new_spec.js',
+            absolute: 'C:\\Users\\user\\Desktop\\my_folder\\new_spec.js',
+          }
+
+          this.ipc.showNewSpecDialog.resolves({
+            specs: this.specsWindows,
+            path: this.newSpec.absolute,
+          })
+        })
+
+        it('displays a dismissable warning message', function () {
+          cy.contains('New Spec File').click()
+
+          cy.contains('Your file has been successfully created')
+          .should('be.visible')
+          .closest('.notification-wrap')
+          .find('.notification-close')
+          .click()
+
+          cy.contains('Your file has been successfully created').should('not.be.visible')
         })
       })
     })

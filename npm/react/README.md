@@ -1,10 +1,6 @@
-> A little helper to unit test React components in the open source [Cypress.io](https://www.cypress.io/) E2E test runner **v4.5.0+**
+> A little helper to unit test React components in the open source [Cypress.io](https://www.cypress.io/) test runner **v7.0.0+**
 
 **Jump to:** [Comparison](#comparison), [Blog posts](#blog-posts), [Install](#install), Examples: [basic](#basic-examples), [advanced](#advanced-examples), [full](#full-examples), [external](#external-examples), [Style options](#options), [Code coverage](#code-coverage), [Visual testing](#visual-testing), [Common problems](#common-problems), [Chat](#chat)
-
-## Survey
-
-Hi there! We are trying to collect feedback from Cypress users who need component testing. Answer a few questions [in this survey](https://forms.gle/qiX2ScqPNEMgwvfA9) about component testing to help us 🙏
 
 ## TLDR
 
@@ -12,9 +8,9 @@ Hi there! We are trying to collect feedback from Cypress users who need componen
 
 ![Example component test](images/dynamic.gif)
 
-- How is this different from [Enzyme](https://github.com/airbnb/enzyme) or [RTL](https://testing-library.com/docs/react-testing-library/intro)? It is similar in functionality BUT runs the component in the real browser with full power of Cypress E2E test runner: [live GUI, full API, screen recording, CI support, cross-platform](https://www.cypress.io/features/), and [visual testing](https://on.cypress.io/visual-testing). Ohh, and the code coverage is built-in!
+- How is this different from [Enzyme](https://github.com/airbnb/enzyme) or [RTL](https://testing-library.com/docs/react-testing-library/intro)? It is similar in functionality BUT runs the component in the real browser with full power of Cypress E2E test runner: [live GUI, full API, screen recording, CI support, cross-platform](https://www.cypress.io/features/), and [visual testing](https://on.cypress.io/visual-testing). 
 - If you like using `@testing-library/react`, you can use `@testing-library/cypress` for the same `findBy`, `queryBy` commands, see one of the examples in the list below
-- Read [My Vision for Component Tests in Cypress](https://glebbahmutov.com/blog/my-vision-for-component-tests/)
+- Read [My Vision for Component Tests in Cypress](https://glebbahmutov.com/blog/my-vision-for-component-tests/) by Gleb Bahmutov
 
 ## Comparison
 
@@ -47,21 +43,21 @@ If you are coming from Enzyme world, check out the [enzyme](cypress/component/ba
 
 - [My Vision for Component Tests in Cypress](https://glebbahmutov.com/blog/my-vision-for-component-tests/)
 - [Unit Testing React components with Cypress](https://itnext.io/unit-testing-react-components-with-cypress-4d4cf8cd59a0)
-- [Test React Component with @cypress/react Example](https://dev.to/bahmutov/test-react-component-with-@cypress/react-example-4d99)
+- [Test React Component with @cypress/react Example](https://dev.to/bahmutov/test-react-component-with-cypress-react-unit-test-example-4d99)
 - [Tic-Tac-Toe Component Tests](https://glebbahmutov.com/blog/tic-tac-toe-component-tests/)
 - [Using .env and .env.test from React component tests](https://medium.com/@bahmutov/using-env-and-env-test-from-react-component-tests-c11aa2040bc8)
 - [Visual testing for React components using open source tools](https://glebbahmutov.com/blog/open-source-visual-testing-of-components/)
-- [12 Recipes for testing React applications using @cypress/react](https://dev.to/bahmutov/12-recipes-for-testing-react-applications-using-@cypress/react-46g6) (compare to [12 Recipes for testing React applications using Testing Library](https://dev.to/jooforja/12-recipes-for-testing-react-applications-using-testing-library-1bh2#portal))
+- [12 Recipes for testing React applications using @cypress/react](https://dev.to/bahmutov/12-recipes-for-testing-react-applications-using-cypress-react-unit-test-46g6) (compare to [12 Recipes for testing React applications using Testing Library](https://dev.to/jooforja/12-recipes-for-testing-react-applications-using-testing-library-1bh2#portal))
 - [Cypress Unit Testing React Components With TypeScript](https://medium.com/swlh/cypress-unit-testing-react-components-with-typescript-77b38e5043b3)
 - [Test The Interface Not The Implementation](https://glebbahmutov.com/blog/test-the-interface/) compares Jest + React Testing Library to @cypress/react + Cypress Testing Library
 - [Components People Test](https://glebbahmutov.com/blog/components-people-test/) about testing a component inside a Next.js-powered blog
 
 ## Install
 
-Requires [Node](https://nodejs.org/en/) version 8 or above.
+Requires [Node](https://nodejs.org/en/) version 12 or above.
 
 ```sh
-npm install --save-dev cypress @cypress/react
+npm install --save-dev cypress @cypress/react @cypress/webpack-dev-server
 ```
 
 ## Init
@@ -69,18 +65,12 @@ npm install --save-dev cypress @cypress/react
 You can use our command line wizard to give you instructions on configuring this plugin. It will try to determine which framework or bundling tool you are using and give you instructions on right configuration.
 
 ```sh
-@cypress/react init
+npx create-cypress-tests --component-tests
 ```
 
-Or continue with manual installation:
+Or continue with manual installation in the plugin file
 
-1. Include this plugin from your project's `cypress/support/index.js`
-
-```js
-require('@cypress/react/support')
-```
-
-2. Tell Cypress how your React application is transpiled or bundled (using Webpack), so Cypress can load your components. For example, if you use `react-scripts` (even after ejecting) do:
+1. Tell Cypress how your React application is transpiled or bundled (using Webpack), so Cypress can load your components. For example, if you use `react-scripts` (even after ejecting) do:
 
 ```js
 // cypress/plugins/index.js
@@ -94,11 +84,10 @@ module.exports = (on, config) => {
 
 See [Recipes](./docs/recipes.md) for more examples.
 
-3. ⚠️ Turn the experimental component support on in your `cypress.json`. You can also specify where component spec files are located. For example, to have them located in `src` folder use:
+2. You can specify where component spec files are located. For example, to have them located in `src` folder use:
 
 ```json
 {
-  "experimentalComponentTesting": true,
   "componentFolder": "src"
 }
 ```
@@ -305,7 +294,29 @@ If your React and React DOM libraries are installed in non-standard paths (think
 
 </details>
 
+You may also specify the `ReactDOM` package to use. This can be useful in complex monorepo setups that have different versions of React and React DOM installed. If you see an error relating to [mismatching versions of React or React DOM](https://reactjs.org/warnings/invalid-hook-call-warning.html#mismatching-versions-of-react-and-react-dom), this may be the solution. You can do this using the `ReactDom` option:
+
+```jsx
+// if you have multiple versions of ReactDom in your monorepo
+import ReactDom from 'react-dom'
+
+mount(<Todo todo={todo} />, {
+  stylesheets: [
+    'https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.css',
+  ],
+  ReactDom
+})
+```
+
 ## Code coverage
+
+In order to use code coverage you can follow the instructions from [docs](https://github.com/cypress-io/code-coverage). In most of cases you need to install 2 dependencies: 
+
+```
+npm i @cypress/code-coverage babel-plugin-istanbul
+
+yarn add @cypress/code-coverage babel-plugin-istanbul
+```
 
 If you are using [plugins/cra-v3](plugins/cra-v3) it instruments the code on the fly using `babel-plugin-istanbul` and generates report using dependency [cypress-io/code-coverage](https://github.com/cypress-io/code-coverage) (included). If you want to disable code coverage instrumentation and reporting, use `--env coverage=false` or `CYPRESS_coverage=false` or set in your `cypress.json` file
 
@@ -324,21 +335,6 @@ You can use any Cypress [Visual Testing plugin](https://on.cypress.io/plugins#vi
 For a larger Do-It-Yourself example with an hour long list of explanation videos, see [bahmutov/sudoku](https://github.com/bahmutov/sudoku) repository. I explain how to write visual testing using open source tools in this [blog post](https://glebbahmutov.com/blog/open-source-visual-testing-of-components/), [video talk](https://www.youtube.com/watch?v=00BNExlJUU8), and [slides](https://slides.com/bahmutov/i-see-what-is-going-on).
 
 ## Common problems
-
-<details id="node-sass">
-  <summary>Node Sass</summary>
-
-When using Node Sass styles, tell Cypress to use [the system NodeJS](https://on.cypress.io/configuration#Node-version) rather than its bundled version. In `cypress.json` set option:
-
-```json
-{
-  "nodeVersion": "system"
-}
-```
-
-Find full example in [sass-and-ts](examples/sass-and-ts) folder.
-
-</details>
 
 <details id="fast-enough">
   <summary>Slower than Jest</summary>
@@ -375,44 +371,13 @@ Finally, when running tests on the continuous integration service, the true test
 
 </details>
 
-<details id="speed">
-  <summary>Slow bundling</summary>
-
-When you bundle spec file, you are now bundling React, Read DOM and other libraries, which is might be slow. For now, you can disable inline source maps by adding to your Webpack config settings (if available) the following:
-
-```js
-const webpackOptions = {
-  devtool: false,
-}
-```
-
-Keep your eye on issue [#9663](https://github.com/cypress-io/cypress/issues/9663) for more information.
-
-</details>
-
-<details id="missing-code-coverage">
-  <summary>Missing code coverage</summary>
-
-If you are using your custom Webpack, this plugin might be missing code coverage information because the code was not instrumented. We try to insert the `babel-plugin-istanbul` plugin automatically, but your bundling might not use Babel, or configure it differently, preventing plugin insertion. Please let us know by opening an issue with full reproducible details.
-
-See related issue [#141](https://github.com/bahmutov/cypress-react-unit-test/react/issues/141). You can also debug the plugin's behavior by running it with `DEBUG` environment variable, see [#debugging](#debugging) section.
-
-</details>
-
-<details id="gatsby-not-supported">
-  <summary>Gatsby.js projects not supported</summary>
-
-Currently, this project cannot find Webpack settings used by Gatsby.js, thus it cannot bundle specs and application code correctly. Keep an eye on [#307](https://github.com/cypress-io/cypress/issues/9671)
-
-</details>
-
 ## Context Provider usage
 
 React context provider usage and API described in [./docs/providers-and-composition.md](./docs/providers-and-composition.md)
 
 ## Chat
 
-We have a chat workspace at [https://component-testing.slack.com/](https://component-testing.slack.com/), you are welcome to [join us](https://join.slack.com/t/component-testing/shared_invite/zt-h93lrgsl-8WzE8yNQlcZuZji_gA_mtg).
+Come chat with us [on discord](https://discord.gg/7ZHYhZSW) in the #component-testing channel.
 
 ## Development
 
@@ -432,16 +397,17 @@ Because finding and modifying Webpack settings while running this plugin is done
 DEBUG=@cypress/react,find-webpack
 ```
 
+## Changelog
+
+[Changelog](./CHANGELOG.md)
+
 ## Related tools
 
 Same feature for unit testing components from other frameworks using Cypress
 
-- [cypress-vue-unit-test](https://github.com/bahmutov/cypress-vue-unit-test)
+- [@cypress/vue](https://github.com/cypress-io/cypress/tree/develop/npm/vue)
 - [cypress-cycle-unit-test](https://github.com/bahmutov/cypress-cycle-unit-test)
 - [cypress-svelte-unit-test](https://github.com/bahmutov/cypress-svelte-unit-test)
-- [cypress-angular-unit-test](https://github.com/bahmutov/cypress-angular-unit-test)
+- [@cypress/angular](https://github.com/bahmutov/@cypress/angular)
 - [cypress-hyperapp-unit-test](https://github.com/bahmutov/cypress-hyperapp-unit-test)
 - [cypress-angularjs-unit-test](https://github.com/bahmutov/cypress-angularjs-unit-test)
-
-[renovate-badge]: https://img.shields.io/badge/renovate-app-blue.svg
-[renovate-app]: https://renovateapp.com/

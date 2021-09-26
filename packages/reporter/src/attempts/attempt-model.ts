@@ -10,9 +10,11 @@ import Hook, { HookName } from '../hooks/hook-model'
 import { FileDetails } from '@packages/ui-components'
 import { LogProps } from '../runnables/runnables-store'
 import Log from '../instruments/instrument-model'
+import Session, { SessionProps } from '../sessions/sessions-model'
 
 export default class Attempt {
   @observable agents: Agent[] = []
+  @observable sessions: Record<string, Session> = {}
   @observable commands: Command[] = []
   @observable err = new Err({})
   @observable hooks: Hook[] = []
@@ -28,6 +30,7 @@ export default class Attempt {
     'after all': 0,
     'after each': 0,
     'test body': 0,
+    'studio commands': 0,
   }
   @observable _isOpen: boolean|null = null
 
@@ -87,6 +90,10 @@ export default class Attempt {
     return this.test.isActive || this.isLast
   }
 
+  @computed get studioIsNotEmpty () {
+    return _.some(this.hooks, (hook) => hook.isStudio && hook.commands.length)
+  }
+
   addLog = (props: LogProps) => {
     switch (props.instrument) {
       case 'command': {
@@ -109,6 +116,17 @@ export default class Attempt {
 
     if (log) {
       log.update(props)
+    }
+  }
+
+  removeLog = (props: LogProps) => {
+    switch (props.instrument) {
+      case 'command': {
+        return this._removeCommand(props as CommandProps)
+      }
+      default: {
+        throw new Error(`Attempted to remove log for instrument other than command`)
+      }
     }
   }
 
@@ -159,6 +177,12 @@ export default class Attempt {
     return agent
   }
 
+  _addSession (props: SessionProps) {
+    const session = new Session(props)
+
+    this.sessions[props.sessionInfo.id] = session
+  }
+
   _addRoute (props: RouteProps) {
     const route = new Route(props)
 
@@ -179,6 +203,8 @@ export default class Attempt {
 
     const hook = this.hooks[hookIndex]
 
+    if (!hook) return
+
     hook.addCommand(command)
 
     // make sure that hooks are in order of invocation
@@ -197,5 +223,19 @@ export default class Attempt {
     }
 
     return command
+  }
+
+  _removeCommand (props: CommandProps) {
+    delete this._logs[props.id]
+
+    const commandIndex = _.findIndex(this.commands, { id: props.id })
+
+    this.commands.splice(commandIndex, 1)
+
+    const hookIndex = _.findIndex(this.hooks, { hookId: props.hookId })
+
+    const hook = this.hooks[hookIndex]
+
+    hook.removeCommand(props.id)
   }
 }

@@ -1,10 +1,30 @@
-const filePreprocessor = require('../cra-v3/file-preprocessor')
+const { startDevServer } = require('@cypress/webpack-dev-server')
+const findReactScriptsWebpackConfig = require('./findReactScriptsWebpackConfig')
+const { getLegacyDevServer } = require('../utils/legacy-setup-dev-server')
 
-module.exports = (on, config) => {
-  require('@cypress/code-coverage/task')(on, config)
-  on('file:preprocessor', filePreprocessor(config))
+function devServer (cypressDevServerConfig, {
+  webpackConfigPath,
+} = {
+  webpackConfigPath: 'react-scripts/config/webpack.config',
+}) {
+  return startDevServer({
+    options: cypressDevServerConfig,
+    webpackConfig: findReactScriptsWebpackConfig(cypressDevServerConfig.config, {
+      webpackConfigPath,
+    }),
+  })
+}
 
-  // IMPORTANT to return the config object
-  // with the any changed environment variables
+// Legacy signature
+module.exports = getLegacyDevServer(devServer, (config) => {
+  config.env.reactDevtools = true
+
   return config
+})
+
+// New signature
+module.exports.devServer = devServer
+
+module.exports.defineDevServerConfig = function (devServerConfig) {
+  return devServerConfig
 }

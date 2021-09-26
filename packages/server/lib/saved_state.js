@@ -5,10 +5,12 @@ const Promise = require('bluebird')
 const appData = require('./util/app_data')
 const cwd = require('./cwd')
 const FileUtil = require('./util/file')
-const fs = require('./util/fs')
+const { fs } = require('./util/fs')
 
 const stateFiles = {}
 
+// TODO: remove `showedOnBoardingModal` from this list - it is only included so that misleading `allowed` are not thrown
+// now that it has been removed from use
 const allowed = `
 appWidth
 appHeight
@@ -22,8 +24,17 @@ browserY
 isAppDevToolsOpen
 isBrowserDevToolsOpen
 reporterWidth
-showedOnBoardingModal
+specListWidth
+showedNewProjectBanner
+firstOpenedCypress
+showedStudioModal
 preferredOpener
+ctReporterWidth
+ctIsSpecsListOpen
+ctSpecListWidth
+firstOpened
+lastOpened
+promptsShown
 `.trim().split(/\s+/)
 
 const formStatePath = (projectRoot) => {

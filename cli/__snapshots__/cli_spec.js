@@ -69,8 +69,8 @@ exports['shows help for run --foo 1'] = `
     -e, --env <env>                            sets environment variables. separate multiple values with a comma. overrides any value in cypress.json or cypress.env.json
     --group <name>                             a named group for recorded runs in the Cypress Dashboard
     -k, --key <record-key>                     your secret Record Key. you can omit this if you set a CYPRESS_RECORD_KEY environment variable.
-    --headed                                   displays the browser instead of running headlessly (defaults to true for Firefox and Chromium-family browsers)
-    --headless                                 hide the browser instead of running headed (defaults to true for Electron)
+    --headed                                   displays the browser instead of running headlessly
+    --headless                                 hide the browser instead of running headed (default for cypress run)
     --no-exit                                  keep the browser open after tests finish
     --parallel                                 enables concurrent runs and automatic load balancing of specs across multiple machines or processes
     -p, --port <port>                          runs Cypress on a specific port. overrides any value in cypress.json.
@@ -211,8 +211,10 @@ exports['cli help command shows help 1'] = `
   Commands:
     help               Shows CLI help and exits
     version            prints Cypress version
-    run [options]      Runs Cypress tests from the CLI without the GUI
     open [options]     Opens Cypress in the interactive GUI.
+    run [options]      Runs Cypress tests from the CLI without the GUI
+    open-ct [options]  Opens Cypress component testing interactive mode.
+    run-ct [options]   Runs all Cypress Component Testing suites
     install [options]  Installs the Cypress executable matching this package's
                        version
     verify [options]   Verifies that Cypress is installed correctly and
@@ -247,8 +249,10 @@ exports['cli help command shows help for -h 1'] = `
   Commands:
     help               Shows CLI help and exits
     version            prints Cypress version
-    run [options]      Runs Cypress tests from the CLI without the GUI
     open [options]     Opens Cypress in the interactive GUI.
+    run [options]      Runs Cypress tests from the CLI without the GUI
+    open-ct [options]  Opens Cypress component testing interactive mode.
+    run-ct [options]   Runs all Cypress Component Testing suites
     install [options]  Installs the Cypress executable matching this package's
                        version
     verify [options]   Verifies that Cypress is installed correctly and
@@ -283,8 +287,10 @@ exports['cli help command shows help for --help 1'] = `
   Commands:
     help               Shows CLI help and exits
     version            prints Cypress version
-    run [options]      Runs Cypress tests from the CLI without the GUI
     open [options]     Opens Cypress in the interactive GUI.
+    run [options]      Runs Cypress tests from the CLI without the GUI
+    open-ct [options]  Opens Cypress component testing interactive mode.
+    run-ct [options]   Runs all Cypress Component Testing suites
     install [options]  Installs the Cypress executable matching this package's
                        version
     verify [options]   Verifies that Cypress is installed correctly and
@@ -320,8 +326,10 @@ exports['cli unknown command shows usage and exits 1'] = `
   Commands:
     help               Shows CLI help and exits
     version            prints Cypress version
-    run [options]      Runs Cypress tests from the CLI without the GUI
     open [options]     Opens Cypress in the interactive GUI.
+    run [options]      Runs Cypress tests from the CLI without the GUI
+    open-ct [options]  Opens Cypress component testing interactive mode.
+    run-ct [options]   Runs all Cypress Component Testing suites
     install [options]  Installs the Cypress executable matching this package's
                        version
     verify [options]   Verifies that Cypress is installed correctly and
@@ -443,8 +451,10 @@ exports['cli CYPRESS_INTERNAL_ENV allows and warns when staging environment 1'] 
   Commands:
     help               Shows CLI help and exits
     version            prints Cypress version
-    run [options]      Runs Cypress tests from the CLI without the GUI
     open [options]     Opens Cypress in the interactive GUI.
+    run [options]      Runs Cypress tests from the CLI without the GUI
+    open-ct [options]  Opens Cypress component testing interactive mode.
+    run-ct [options]   Runs all Cypress Component Testing suites
     install [options]  Installs the Cypress executable matching this package's
                        version
     verify [options]   Verifies that Cypress is installed correctly and

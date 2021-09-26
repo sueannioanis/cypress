@@ -10,8 +10,11 @@ import sinon from 'sinon'
 import * as firefox from '../../../lib/browsers/firefox'
 import firefoxUtil from '../../../lib/browsers/firefox-util'
 
+const path = require('path')
+const _ = require('lodash')
 const mockfs = require('mock-fs')
 const FirefoxProfile = require('firefox-profile')
+const launch = require('@packages/launcher/lib/browsers')
 const utils = require('../../../lib/browsers/utils')
 const plugins = require('../../../lib/plugins')
 const protocol = require('../../../lib/browsers/protocol')
@@ -117,7 +120,7 @@ describe('lib/browsers/firefox', () => {
       sinon.stub(plugins, 'has')
       sinon.stub(plugins, 'execute')
       sinon.stub(utils, 'writeExtension').resolves('/path/to/ext')
-      sinon.stub(utils, 'launch').resolves(this.browserInstance)
+      sinon.stub(launch, 'launch').resolves(this.browserInstance)
       sinon.spy(FirefoxProfile.prototype, 'setPreference')
       sinon.spy(FirefoxProfile.prototype, 'updatePreferences')
 
@@ -212,6 +215,39 @@ describe('lib/browsers/firefox', () => {
       })
     })
 
+    it('writes extension and ensure write access', function () {
+      mockfs({
+        [path.resolve(`${__dirname }../../../../../extension/dist`)]: {
+          'background.js': mockfs.file({
+            mode: 0o444,
+          }),
+        },
+        [`${process.env.HOME }/.config/Cypress/cy/test/browsers/firefox-stable/interactive/CypressExtension`]: {
+          'background.js': mockfs.file({
+            content: 'abcn',
+            mode: 0o444,
+          }),
+        },
+        [path.resolve(`${__dirname }/../../extension`)]: { 'abc': 'test' },
+        '/path/to/appData/firefox-stable/interactive': {
+          'xulstore.json': '[foo xulstore.json]',
+          'chrome': { 'userChrome.css': '[foo userChrome.css]' },
+        },
+      })
+
+      utils.writeExtension.restore()
+
+      const getFile = function (path) {
+        return _.reduce(_.compact(_.split(path, '/')), (acc, item) => {
+          return acc.getItem(item)
+        }, mockfs.getMockRoot())
+      }
+
+      return firefox.open(this.browser, 'http://', this.options).then(() => {
+        expect(getFile(`${process.env.HOME }/.config/Cypress/cy/test/browsers/firefox-stable/interactive/CypressExtension/background.js`).getMode()).to.be.equals(0o644)
+      })
+    })
+
     // TODO: pick open port for debugger
     it.skip('finds remote port for firefox debugger', function () {
       return firefox.open(this.browser, 'http://', this.options).then(() => {
@@ -251,7 +287,7 @@ describe('lib/browsers/firefox', () => {
 
     it('launches with the url and args', function () {
       return firefox.open(this.browser, 'http://', this.options).then(() => {
-        expect(utils.launch).to.be.calledWith(this.browser, 'about:blank', [
+        expect(launch.launch).to.be.calledWith(this.browser, 'about:blank', [
           '-marionette',
           '-new-instance',
           '-foreground',

@@ -3,7 +3,15 @@ exports['lib/scaffold .fileTree returns tree-like structure of scaffolded 1'] = 
     "name": "tests",
     "children": [
       {
-        "name": "examples",
+        "name": "1-getting-started",
+        "children": [
+          {
+            "name": "todo.spec.js"
+          }
+        ]
+      },
+      {
+        "name": "2-advanced-examples",
         "children": [
           {
             "name": "actions.spec.js"
@@ -105,6 +113,76 @@ exports['lib/scaffold .fileTree leaves out integration tests if using component 
     "name": "tests",
     "children": [
       {
+        "name": "1-getting-started",
+        "children": [
+          {
+            "name": "todo.spec.js"
+          }
+        ]
+      },
+      {
+        "name": "2-advanced-examples",
+        "children": [
+          {
+            "name": "actions.spec.js"
+          },
+          {
+            "name": "aliasing.spec.js"
+          },
+          {
+            "name": "assertions.spec.js"
+          },
+          {
+            "name": "connectors.spec.js"
+          },
+          {
+            "name": "cookies.spec.js"
+          },
+          {
+            "name": "cypress_api.spec.js"
+          },
+          {
+            "name": "files.spec.js"
+          },
+          {
+            "name": "local_storage.spec.js"
+          },
+          {
+            "name": "location.spec.js"
+          },
+          {
+            "name": "misc.spec.js"
+          },
+          {
+            "name": "navigation.spec.js"
+          },
+          {
+            "name": "network_requests.spec.js"
+          },
+          {
+            "name": "querying.spec.js"
+          },
+          {
+            "name": "spies_stubs_clocks.spec.js"
+          },
+          {
+            "name": "traversal.spec.js"
+          },
+          {
+            "name": "utilities.spec.js"
+          },
+          {
+            "name": "viewport.spec.js"
+          },
+          {
+            "name": "waiting.spec.js"
+          },
+          {
+            "name": "window.spec.js"
+          }
+        ]
+      },
+      {
         "name": "_fixtures",
         "children": [
           {
@@ -145,7 +223,15 @@ exports['lib/scaffold .fileTree leaves out fixtures if configured to false 1'] =
     "name": "tests",
     "children": [
       {
-        "name": "examples",
+        "name": "1-getting-started",
+        "children": [
+          {
+            "name": "todo.spec.js"
+          }
+        ]
+      },
+      {
+        "name": "2-advanced-examples",
         "children": [
           {
             "name": "actions.spec.js"
@@ -239,7 +325,15 @@ exports['lib/scaffold .fileTree leaves out support if configured to false 1'] = 
     "name": "tests",
     "children": [
       {
-        "name": "examples",
+        "name": "1-getting-started",
+        "children": [
+          {
+            "name": "todo.spec.js"
+          }
+        ]
+      },
+      {
+        "name": "2-advanced-examples",
         "children": [
           {
             "name": "actions.spec.js"
@@ -338,19 +432,19 @@ exports['lib/scaffold .support creates supportFolder and commands.js and index.j
 //
 //
 // -- This is a parent command --
-// Cypress.Commands.add("login", (email, password) => { ... })
+// Cypress.Commands.add('login', (email, password) => { ... })
 //
 //
 // -- This is a child command --
-// Cypress.Commands.add("drag", { prevSubject: 'element'}, (subject, options) => { ... })
+// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
 //
 //
 // -- This is a dual command --
-// Cypress.Commands.add("dismiss", { prevSubject: 'optional'}, (subject, options) => { ... })
+// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
 //
 //
 // -- This will overwrite an existing command --
-// Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
 
 `
 
@@ -383,7 +477,15 @@ exports['lib/scaffold .fileTree leaves out plugins if configured to false 1'] = 
     "name": "tests",
     "children": [
       {
-        "name": "examples",
+        "name": "1-getting-started",
+        "children": [
+          {
+            "name": "todo.spec.js"
+          }
+        ]
+      },
+      {
+        "name": "2-advanced-examples",
         "children": [
           {
             "name": "actions.spec.js"
@@ -485,6 +587,7 @@ exports['lib/scaffold .plugins creates pluginsFile when pluginsFolder does not e
 /**
  * @type {Cypress.PluginConfig}
  */
+// eslint-disable-next-line no-unused-vars
 module.exports = (on, config) => {
   // <backtick>on<backtick> is used to hook into various events Cypress emits
   // <backtick>config<backtick> is the resolved Cypress config

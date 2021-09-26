@@ -2,6 +2,7 @@ const debug = require('debug')('cypress:cli')
 const util = require('../util')
 const spawn = require('./spawn')
 const verify = require('../tasks/verify')
+const { processTestingType } = require('./shared')
 
 module.exports = {
   start (options = {}) {
@@ -34,6 +35,8 @@ module.exports = {
     if (options.project) {
       args.push('--project', options.project)
     }
+
+    args.push(...processTestingType(options.testingType))
 
     debug('opening from options %j', options)
     debug('command line arguments %j', args)

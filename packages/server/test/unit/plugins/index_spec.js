@@ -1,5 +1,7 @@
 require('../../spec_helper')
 
+const _ = require('lodash')
+const mockedEnv = require('mocked-env')
 const cp = require('child_process')
 
 const util = require(`${root}../lib/plugins/util`)
@@ -90,11 +92,11 @@ describe('lib/plugins/index', () => {
       return plugins.init(config, getOptions())
       .then(() => {
         const options = {
-          stdio: 'inherit',
+          stdio: 'pipe',
           execPath: systemNode,
         }
 
-        expect(cp.fork.lastCall.args[2]).to.eql(options)
+        expect(_.omit(cp.fork.lastCall.args[2], 'env')).to.eql(options)
       })
     })
 
@@ -109,10 +111,10 @@ describe('lib/plugins/index', () => {
       return plugins.init(config, getOptions())
       .then(() => {
         const options = {
-          stdio: 'inherit',
+          stdio: 'pipe',
         }
 
-        expect(cp.fork.lastCall.args[2]).to.eql(options)
+        expect(_.omit(cp.fork.lastCall.args[2], 'env')).to.eql(options)
       })
     })
 
@@ -133,9 +135,9 @@ describe('lib/plugins/index', () => {
 
     it('sends \'load\' event with config via ipc', () => {
       ipc.on.withArgs('loaded').yields([])
-      const config = { pluginsFile: 'cypress-plugin' }
+      const config = { pluginsFile: 'cypress-plugin', testingType: 'e2e' }
 
-      return plugins.init(config, getOptions()).then(() => {
+      return plugins.init(config, getOptions({ testingType: 'e2e' })).then(() => {
         expect(ipc.send).to.be.calledWith('load', {
           ...config,
           ...configExtras,
@@ -306,6 +308,30 @@ describe('lib/plugins/index', () => {
           expect(_err.title).to.equal('Error running plugin')
           expect(_err.stack).to.include('The following error was thrown by a plugin')
           expect(_err.details).to.include(err.message)
+        })
+      })
+    })
+
+    describe('restore node options', () => {
+      let restoreEnv
+
+      afterEach(() => {
+        if (restoreEnv) {
+          restoreEnv()
+          restoreEnv = null
+        }
+      })
+
+      it('restore NODE_OPTIONS', () => {
+        restoreEnv = mockedEnv({
+          ORIGINAL_NODE_OPTIONS: '--require foo.js',
+        })
+
+        ipc.on.withArgs('loaded').yields([])
+
+        return plugins.init({ pluginsFile: 'cypress-plugin' }, getOptions())
+        .then(() => {
+          expect(cp.fork.lastCall.args[2].env.NODE_OPTIONS).to.eql('--require foo.js')
         })
       })
     })

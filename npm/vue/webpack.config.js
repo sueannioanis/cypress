@@ -1,15 +1,24 @@
 // A basic webpack configuration
 // The default for running tests in this project
 // https://vue-loader.vuejs.org/guide/#manual-setup
-const VueLoaderPlugin = require('vue-loader/lib/plugin')
+const { VueLoaderPlugin } = require('vue-loader')
 const path = require('path')
+const pkg = require('package.json')
 
 module.exports = {
+  mode: 'development',
+  output: {
+    path: path.join(__dirname, 'dist'),
+    filename: 'js/[name].js',
+    publicPath: '/',
+    chunkFilename: 'js/[name].js',
+  },
+
   resolve: {
     extensions: ['.js', '.json', '.vue'],
     alias: {
-      // point at the built file
-      '@cypress/vue': path.join(__dirname, 'dist'),
+      vue$: 'vue/dist/vue.esm-bundler.js',
+      '@cypress/vue': path.join(__dirname, pkg.main),
     },
   },
   module: {
@@ -17,6 +26,10 @@ module.exports = {
       {
         test: /\.vue$/,
         loader: 'vue-loader',
+      },
+      {
+        test: /\.[j,t]s$/,
+        loader: 'babel-loader',
       },
       // this will apply to both plain `.css` files
       // AND `<style>` blocks in `.vue` files

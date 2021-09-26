@@ -1,7 +1,7 @@
 require('../spec_helper')
 
 const path = require('path')
-const fs = require(`${root}lib/util/fs`)
+const { fs } = require(`${root}lib/util/fs`)
 const settings = require(`${root}lib/util/settings`)
 
 const projectRoot = process.cwd()
@@ -106,6 +106,24 @@ describe('lib/settings', () => {
         })
       })
 
+      it('promises cypress.json and merges CT specific properties for via testingType: component', function () {
+        return this.setup({ a: 'b', component: { a: 'c' } })
+        .then(() => {
+          return settings.read(projectRoot, { testingType: 'component' })
+        }).then((obj) => {
+          expect(obj).to.deep.eq({ a: 'c', component: { a: 'c' } })
+        })
+      })
+
+      it('promises cypress.json and merges e2e specific properties', function () {
+        return this.setup({ a: 'b', e2e: { a: 'c' } })
+        .then(() => {
+          return settings.read(projectRoot)
+        }).then((obj) => {
+          expect(obj).to.deep.eq({ a: 'c', e2e: { a: 'c' } })
+        })
+      })
+
       it('renames commandTimeout -> defaultCommandTimeout', function () {
         return this.setup({ commandTimeout: 30000, foo: 'bar' })
         .then(() => {
@@ -204,6 +222,10 @@ describe('lib/settings', () => {
       this.options = {
         configFile: 'my-test-config-file.json',
       }
+
+      this.optionsJs = {
+        configFile: 'my-test-config-file.js',
+      }
     })
 
     afterEach(function () {
@@ -233,6 +255,16 @@ describe('lib/settings', () => {
         return settings.read(this.projectRoot, this.options)
         .then((settings) => {
           expect(settings).to.deep.equal({ foo: 'bar' })
+        })
+      })
+    })
+
+    it('.read returns from configFile when its a JavaScript file', function () {
+      return fs.writeFile(path.join(this.projectRoot, this.optionsJs.configFile), `module.exports = { baz: 'lurman' }`)
+      .then(() => {
+        return settings.read(this.projectRoot, this.optionsJs)
+        .then((settings) => {
+          expect(settings).to.deep.equal({ baz: 'lurman' })
         })
       })
     })

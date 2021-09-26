@@ -1,0 +1,11 @@
+{
+  "testFiles": "**/*spec.{ts,tsx}",
+  "video": true,
+  "env": {
+    "reactDevtools": true
+  },
+  "reporter": "../../node_modules/cypress-multi-reporters/index.js",
+  "reporterOptions": {
+    "configFile": "../../mocha-reporter-config.json"
+  }
+}
