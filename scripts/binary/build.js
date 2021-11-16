@@ -10,7 +10,6 @@ const pluralize = require('pluralize')
 const execa = require('execa')
 const electron = require('@packages/electron')
 const debug = require('debug')('cypress:binary')
-const R = require('ramda')
 const la = require('lazy-ass')
 const check = require('check-more-types')
 
@@ -20,7 +19,7 @@ const packages = require('./util/packages')
 const xvfb = require('../../cli/lib/exec/xvfb')
 const { transformRequires } = require('./util/transform-requires')
 const { testStaticAssets } = require('./util/testStaticAssets')
-const performanceTracking = require('../../packages/server/test/support/helpers/performance.js')
+const performanceTracking = require('@tooling/system-tests/lib/performance')
 
 const rootPackage = require('@packages/root')
 
@@ -116,7 +115,11 @@ const buildCypressApp = function (platform, version, options = {}) {
 
     return packages.runAllBuild()
     // Promise.resolve()
-    .then(R.tap(logBuiltAllPackages))
+    .then((val) => {
+      logBuiltAllPackages(val)
+
+      return val
+    })
   }
 
   const copyPackages = function () {
@@ -343,7 +346,7 @@ require('./packages/server')\
     console.log('in build folder %s', buildFolder)
 
     return execa('ls', ['-la', buildFolder])
-    .then(R.prop('stdout'))
+    .then((val) => val.stdout)
     .then(console.log)
   }
 
@@ -430,14 +433,16 @@ require('./packages/server')\
     }
 
     const printDiskUsage = function (sizes) {
-      const bySize = R.sortBy(R.prop('1'))
-
-      return console.log(bySize(R.toPairs(sizes)))
+      return console.log(_.sortBy(_.toPairs(sizes), 1))
     }
 
     return execa('du', args)
     .then(parseDiskUsage)
-    .then(R.tap(printDiskUsage))
+    .then((val) => {
+      printDiskUsage(val)
+
+      return val
+    })
     .then((sizes) => {
       return performanceTracking.track('test runner size', sizes)
     })
