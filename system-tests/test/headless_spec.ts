@@ -1,13 +1,13 @@
-import systemTests from '../lib/system-tests'
-import Fixtures from '../lib/fixtures'
+import systemTests, { BrowserName } from '../lib/system-tests'
 
 describe('e2e headless', function () {
   systemTests.setup()
 
   describe('ELECTRON_RUN_AS_NODE', () => {
     const baseSpec = {
-      spec: 'headless_spec.js',
+      spec: 'headless.cy.js',
       config: {
+        videoCompression: false,
         env: {
           'CI': process.env.CI,
           'EXPECT_HEADLESS': '1',
@@ -26,7 +26,7 @@ describe('e2e headless', function () {
 
     systemTests.it('pass for browsers that do not need xvfb', {
       ...baseSpec,
-      browser: ['chrome', 'chrome-beta', 'firefox'],
+      browser: ['chrome', 'firefox'],
       expectedExitCode: 0,
       onRun (exec) {
         return exec().then(({ stderr }) => {
@@ -44,8 +44,9 @@ describe('e2e headless', function () {
 
   // cypress run --headless
   systemTests.it('tests in headless mode pass', {
-    spec: 'headless_spec.js',
+    spec: 'headless.cy.js',
     config: {
+      videoCompression: false,
       env: {
         'CI': process.env.CI,
         'EXPECT_HEADLESS': '1',
@@ -61,13 +62,14 @@ describe('e2e headless', function () {
   // "can not record video in headed mode" error
   // this trick allows us to have 1 snapshot for electron
   // and 1 for every other browser
-  ;[
+  ;([
     'electron',
     '!electron',
-  ].map((b) => {
+  ] as BrowserName[]).map((b) => {
     systemTests.it(`tests in headed mode pass in ${b}`, {
-      spec: 'headless_spec.js',
+      spec: 'headless.cy.js',
       config: {
+        videoCompression: false,
         env: {
           'CI': process.env.CI,
         },
@@ -81,13 +83,13 @@ describe('e2e headless', function () {
 
   systemTests.it('launches maximized by default in headless mode (1920x1080)', {
     headed: false,
-    project: Fixtures.projectPath('screen-size'),
-    spec: 'default_size.spec.js',
+    project: 'screen-size',
+    spec: 'default_size.cy.js',
   })
 
   systemTests.it('launches at DPR 1x', {
     headed: false,
-    project: Fixtures.projectPath('screen-size'),
-    spec: 'device_pixel_ratio.spec.js',
+    project: 'screen-size',
+    spec: 'device_pixel_ratio.cy.js',
   })
 })

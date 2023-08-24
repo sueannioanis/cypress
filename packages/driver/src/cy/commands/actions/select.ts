@@ -5,13 +5,19 @@ import $dom from '../../../dom'
 import $utils from '../../../cypress/utils'
 import $errUtils from '../../../cypress/error_utils'
 import $elements from '../../../dom/elements'
+import type { Log } from '../../../cypress/log'
 
 const newLineRe = /\n/g
 
+interface InternalSelectOptions extends Partial<Cypress.SelectOptions> {
+  _log?: Log
+  $el: JQuery<HTMLSelectElement>
+  error?: any
+}
+
 export default (Commands, Cypress, cy) => {
   Commands.addAll({ prevSubject: 'element' }, {
-    // TODO: any -> Partial<Cypress.SelectOptions>
-    select (subject, valueOrTextOrIndex, options: any = {}) {
+    select (subject, valueOrTextOrIndex, userOptions: Partial<Cypress.SelectOptions> = {}) {
       if (
         !_.isNumber(valueOrTextOrIndex)
         && !_.isString(valueOrTextOrIndex)
@@ -28,9 +34,7 @@ export default (Commands, Cypress, cy) => {
         $errUtils.throwErrByPath('select.invalid_array_argument', { args: { value: JSON.stringify(valueOrTextOrIndex) } })
       }
 
-      const userOptions = options
-
-      options = _.defaults({}, userOptions, {
+      const options: InternalSelectOptions = _.defaults({}, userOptions, {
         $el: subject,
         log: true,
         force: false,
@@ -43,8 +47,8 @@ export default (Commands, Cypress, cy) => {
         const deltaOptions = $utils.filterOutOptions(options)
 
         options._log = Cypress.log({
-          message: deltaOptions,
           $el: options.$el,
+          message: deltaOptions,
           timeout: options.timeout,
           consoleProps () {
             // merge into consoleProps without mutating it
@@ -55,7 +59,7 @@ export default (Commands, Cypress, cy) => {
           },
         })
 
-        options._log.snapshot('before', { next: 'after' })
+        options._log!.snapshot('before', { next: 'after' })
       }
 
       let node
@@ -100,13 +104,16 @@ export default (Commands, Cypress, cy) => {
         $errUtils.throwErrByPath('select.invalid_multiple')
       }
 
+      const subjectChain = cy.subjectChain()
+
       const getOptions = () => {
+        options.$el = cy.getSubjectFromChain(subjectChain)
         let notAllUniqueValues
 
         // throw if <select> is disabled
-        if (!options.force && options.$el.prop('disabled')) {
-          node = $dom.stringify(options.$el)
-          $errUtils.throwErrByPath('select.disabled', { args: { node } })
+        if (!options.force) {
+          Cypress.ensure.isElement(options.$el, 'select', options._log)
+          Cypress.ensure.isNotDisabled(options.$el, 'select', options._log)
         }
 
         const values: string[] = []
@@ -120,6 +127,11 @@ export default (Commands, Cypress, cy) => {
           if (valueOrTextOrIndex.includes(value) || valueOrTextOrIndex.includes(index)) {
             optionEls.push(optEl)
             values.push(value)
+
+            // https://github.com/cypress-io/cypress/issues/24739
+            if (options.$el.find(`option[value="${value}"]`).length > 1) {
+              notAllUniqueValues = true
+            }
           }
 
           // replace new line chars, then trim spaces
@@ -176,9 +188,7 @@ export default (Commands, Cypress, cy) => {
               args: { node },
             })
           }
-        })
 
-        _.each(optionEls, ($el) => {
           if ($el.closest('optgroup').prop('disabled')) {
             node = $dom.stringify($el)
 
@@ -231,12 +241,12 @@ export default (Commands, Cypress, cy) => {
           const activeElement = $elements.getActiveElByDocument(options.$el)
 
           if (!options.force && activeElement === null) {
-            const node = $dom.stringify(options.$el)
-            const onFail = options._log
-
-            $errUtils.throwErrByPath('select.disabled', {
-              onFail,
-              args: { node },
+            $errUtils.throwErrByPath('dom.disabled', {
+              onFail: options._log,
+              args: {
+                cmd: 'select',
+                node: $dom.stringify(options.$el),
+              },
             })
           }
 
@@ -252,6 +262,8 @@ export default (Commands, Cypress, cy) => {
               interval: options.interval,
             })
           }).then(() => {
+            const oldValue = options.$el[0].selectedIndex
+
             // reset the selects value after we've
             // fired all the proper click events
             // for the options
@@ -262,7 +274,7 @@ export default (Commands, Cypress, cy) => {
 
             if (notAllUniqueValues) {
               // if all the values are the same and the user is trying to
-              // select based on the text, setting the val() will just
+              // select based on the text or index, setting the val() will just
               // select the first one
               let selectedIndex = 0
 
@@ -277,6 +289,12 @@ export default (Commands, Cypress, cy) => {
               })
 
               options.$el[0].selectedIndex = selectedIndex
+            }
+
+            // https://github.com/cypress-io/cypress/issues/19494
+            // When user selects the same option again, `input`, `change` events should not be fired.
+            if (options.$el[0].selectedIndex === oldValue) {
+              return
             }
 
             const input = new Event('input', {

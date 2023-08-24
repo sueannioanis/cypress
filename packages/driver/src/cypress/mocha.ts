@@ -1,7 +1,6 @@
 /* eslint-disable prefer-rest-params */
-// @ts-nocheck
 import _ from 'lodash'
-import $errUtils from './error_utils'
+import $errUtils, { CypressError } from './error_utils'
 import $utils from './utils'
 import $stackUtils from './stack_utils'
 
@@ -11,7 +10,7 @@ import * as mocha from 'mocha'
 
 const { getTestFromRunnable } = $utils
 
-const Mocha = mocha.Mocha != null ? mocha.Mocha : mocha
+const Mocha = (mocha as any).Mocha != null ? (mocha as any).Mocha : mocha
 
 const { Test, Runner, Runnable, Hook, Suite } = Mocha
 
@@ -33,16 +32,27 @@ const suiteAfterAll = Suite.prototype.afterAll
 const suiteAfterEach = Suite.prototype.afterEach
 
 // don't let mocha pollute the global namespace
-delete window.mocha
-delete window.Mocha
+delete (window as any).mocha
+delete (window as any).Mocha
 
-function invokeFnWithOriginalTitle (ctx, originalTitle, mochaArgs, fn, _testConfig) {
-  const ret = fn.apply(ctx, mochaArgs)
+export const SKIPPED_DUE_TO_BROWSER_MESSAGE = ' (skipped due to browser)'
 
-  ret._testConfig = _testConfig
-  ret.originalTitle = originalTitle
+type MochaArgs = [string, Function | undefined]
+function createRunnable (ctx, fnType: 'Test' | 'Suite', mochaArgs: MochaArgs, runnableFn: Function, testCallback: Function | string = '', _testConfig?: Record<string, any>) {
+  const runnable = runnableFn.apply(ctx, mochaArgs)
 
-  return ret
+  // attached testConfigOverrides will execute before `runner:test:before:run` event
+  if (_testConfig) {
+    runnable._testConfig = _testConfig
+  }
+
+  if (fnType === 'Test') {
+    // persist the original callback so we can send it to the cloud
+    // to prevent it from being registered as a modified test
+    runnable.body = testCallback.toString()
+  }
+
+  return runnable
 }
 
 function overloadMochaFnForConfig (fnName, specWindow) {
@@ -67,47 +77,51 @@ function overloadMochaFnForConfig (fnName, specWindow) {
 
       const origFn = subFn ? _fn[subFn] : _fn
 
-      if (args.length > 2 && _.isObject(args[1])) {
-        const _testConfig = _.extend({}, args[1])
+      // fallback to empty string for stubbed runnables written like:
+      // - describe('concept')
+      // - it('does something')
+      let testCallback = args[1]
 
-        const mochaArgs = [args[0], args[2]]
+      if (args.length > 2 && _.isObject(args[1])) {
+        const _testConfig = _.extend({}, args[1]) as any
+
+        const mochaArgs: MochaArgs = [args[0], args[2]]
+        const originalTitle = mochaArgs[0]
+
+        // fallback to empty string for stubbed runnables written like:
+        // - describe('concept')
+        // - it('does something')
+        testCallback = mochaArgs[1]
 
         const configMatchesBrowser = _testConfig.browser == null || Cypress.isBrowser(_testConfig.browser, `${fnType} config value \`{ browser }\``)
 
         if (!configMatchesBrowser) {
-          // TODO: this would mess up the dashboard since it would be registered as a new test
-          const originalTitle = mochaArgs[0]
+          mochaArgs[0] = `${originalTitle}${SKIPPED_DUE_TO_BROWSER_MESSAGE}`
 
-          mochaArgs[0] = `${originalTitle} (skipped due to browser)`
-
-          // TODO: weird edge case where you have an .only but also skipped the test due to the browser
+          // skip test at run-time when test is marked with .only but should also be skipped the test due to the browser
           if (subFn === 'only') {
             mochaArgs[1] = function () {
               this.skip()
             }
 
-            return invokeFnWithOriginalTitle(this, originalTitle, mochaArgs, origFn, _testConfig)
+            return createRunnable(this, fnType, mochaArgs, origFn, testCallback, _testConfig)
           }
 
-          return invokeFnWithOriginalTitle(this, originalTitle, mochaArgs, _fn['skip'], _testConfig)
+          // skip test with .skip func to ignore the test case and not run it
+          return createRunnable(this, fnType, mochaArgs, _fn['skip'], testCallback, _testConfig)
         }
 
-        const ret = origFn.apply(this, mochaArgs)
-
-        // attached testConfigOverrides will executes on `runner:test:before:run` event
-        ret._testConfig = _testConfig
-
-        return ret
+        return createRunnable(this, fnType, mochaArgs, origFn, testCallback, _testConfig)
       }
 
-      return origFn.apply(this, args)
+      return createRunnable(this, fnType, args as MochaArgs, origFn, testCallback)
     }
   }
 
   overrideMochaFn(replacementFn)
 }
 
-const ui = (specWindow, _mocha, config) => {
+const ui = (specWindow, _mocha) => {
   // Override mocha.ui so that the pre-require event is emitted
   // with the iframe's `window` reference, rather than the parent's.
   _mocha.ui = function (name) {
@@ -147,7 +161,7 @@ const setMochaProps = (specWindow, _mocha) => {
   // to the mocha instance for clarity
   m.Mocha = M
 
-  // this needs to be part of the configuration of cypress.json
+  // this needs to be part of the configuration of cypress.config.{js,ts,mjs,cjs}
   // we can't just forcibly use bdd
   return ui(specWindow, _mocha)
 }
@@ -258,7 +272,7 @@ const patchHookRetries = () => {
       })
 
       // so this error doesn't cause a retry
-      getTestFromRunnable(this)._retries = -1
+      getTestFromRunnable(this).retries(-1)
 
       throw err
     }
@@ -268,7 +282,7 @@ const patchHookRetries = () => {
 }
 
 // matching the current Runner.prototype.fail except
-// changing the logic for determing whether this is a valid err
+// changing the logic for determining whether this is a valid err
 const patchRunnerFail = () => {
   Runner.prototype.fail = function (runnable, err) {
     const errMessage = _.get(err, 'message')
@@ -308,11 +322,10 @@ function patchTestClone () {
 
     const ret = testClone.apply(this, arguments)
 
-    // carry over testConfigOverrides
+    // carry over testConfig, id, and order
     ret._testConfig = this._testConfig
-
-    // carry over test.id
     ret.id = this.id
+    ret.order = this.order
 
     return ret
   }
@@ -400,6 +413,8 @@ const patchSuiteAddSuite = (specWindow, config) => {
 const patchRunnableResetTimeout = () => {
   Runnable.prototype.resetTimeout = function () {
     const runnable = this
+    // @ts-ignore Cypress.runner is not defined
+    const currentRunner = Cypress.runner
 
     const ms = this.timeout() || 1e9
 
@@ -411,15 +426,12 @@ const patchRunnableResetTimeout = () => {
         return 'mocha.async_timed_out'
       }
 
-      // TODO: improve this error message. It's not that
-      // a command necessarily timed out - in fact this is
-      // a mocha timeout, and a command likely *didn't*
-      // time out correctly, so we received this message instead.
-      return 'mocha.timed_out'
+      return 'miscellaneous.test_stopped'
     }
 
     this.timer = setTimeout(() => {
-      if (runnable.state === 'passed') {
+      // @ts-ignore Cypress.runner is not defined
+      if (runnable.state === 'passed' || Cypress.runner !== currentRunner) {
         // this timeout can be reached at the same time that a
         // user does an asynchronous `done`, so double-check
         // that the test has not already passed before timing out
@@ -447,15 +459,18 @@ const patchSuiteHooks = (specWindow, config) => {
         let invocationStack = hook.invocationDetails?.stack
 
         if (!hook.invocationDetails) {
-          const invocationDetails = $stackUtils.getInvocationDetails(specWindow, config)
+          const invocationDetails = $stackUtils.getInvocationDetails(specWindow, config)!
 
           hook.invocationDetails = invocationDetails
           invocationStack = invocationDetails.stack
         }
 
         if (this._condensedHooks) {
-          throw $errUtils.errByPath('mocha.hook_registered_late', { hookTitle: fnName })
-          .setUserInvocationStack(invocationStack)
+          const err = $errUtils.errByPath('mocha.hook_registered_late', { hookTitle: fnName }) as CypressError
+
+          err.setUserInvocationStack(invocationStack)
+
+          throw err
         }
 
         return hook

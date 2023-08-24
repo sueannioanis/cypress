@@ -7,6 +7,7 @@ const debug = require('debug')('cypress:server:preprocessor')
 const Promise = require('bluebird')
 const appData = require('../util/app_data')
 const plugins = require('../plugins')
+const { telemetry } = require('@packages/telemetry')
 
 const errorMessage = function (err = {}) {
   return err.stack || err.annotated || err.message || err.toString()
@@ -36,13 +37,13 @@ plugins.registerHandler((ipc) => {
   ipc.on('preprocessor:rerun', (filePath) => {
     debug('ipc preprocessor:rerun event')
 
-    return baseEmitter.emit('file:updated', filePath)
+    baseEmitter.emit('file:updated', filePath)
   })
 
-  return baseEmitter.on('close', (filePath) => {
+  baseEmitter.on('close', (filePath) => {
     debug('base emitter plugin close event')
 
-    return ipc.send('preprocessor:close', filePath)
+    ipc.send('preprocessor:close', filePath)
   })
 })
 
@@ -69,9 +70,7 @@ const API = {
       // vs config.isInterativeMode
       const shouldWatch = !config.isTextTerminal || Boolean(process.env.CYPRESS_INTERNAL_FORCE_FILEWATCH)
 
-      const baseFilePath = filePath
-      .replace(config.projectRoot, '')
-      .replace(config.integrationFolder, '')
+      const baseFilePath = filePath.replace(config.projectRoot, '')
 
       fileObject = (fileObjects[filePath] = _.extend(new EE(), {
         filePath,
@@ -99,7 +98,14 @@ const API = {
     }
 
     const preprocessor = (fileProcessors[filePath] = Promise.try(() => {
-      return plugins.execute('file:preprocessor', fileObject)
+      const span = telemetry.startSpan({ name: 'file:preprocessor' })
+
+      return plugins.execute('file:preprocessor', fileObject).then((arg) => {
+        span?.setAttribute('file', arg)
+        span?.end()
+
+        return arg
+      })
     }))
 
     return preprocessor
@@ -126,7 +132,7 @@ const API = {
 
     delete fileObjects[filePath]
 
-    return delete fileProcessors[filePath]
+    delete fileProcessors[filePath]
   },
 
   close () {
@@ -136,7 +142,7 @@ const API = {
     fileProcessors = {}
     baseEmitter.emit('close')
 
-    return baseEmitter.removeAllListeners()
+    baseEmitter.removeAllListeners()
   },
 }
 

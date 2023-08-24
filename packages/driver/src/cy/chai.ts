@@ -1,4 +1,3 @@
-// @ts-nocheck
 /* eslint-disable prefer-rest-params */
 // tests in driver/cypress/integration/commands/assertions_spec.js
 
@@ -9,10 +8,13 @@ import sinonChai from '@cypress/sinon-chai'
 
 import $dom from '../dom'
 import $utils from '../cypress/utils'
+import { escapeBackslashes, escapeQuotes } from '../util/escape'
 import $errUtils from '../cypress/error_utils'
 import $stackUtils from '../cypress/stack_utils'
 import $chaiJquery from '../cypress/chai_jquery'
 import * as chaiInspect from './chai/inspect'
+import type { StateFunc } from '../cypress/state'
+import type { $Cy } from '../cypress/cy'
 
 // all words between single quotes
 const allPropertyWordsBetweenSingleQuotes = /('.*?')/g
@@ -28,28 +30,22 @@ const allQuadStars = /\*\*\*\*/g
 const leadingWhitespaces = /\*\*'\s*/g
 const trailingWhitespaces = /\s*'\*\*/g
 const whitespace = /\s/g
-const valueHasLeadingOrTrailingWhitespaces = /\*\*'\s+|\s+'\*\*/g
+const valueHasLeadingOrTrailingWhitespaces = /\*\*'\s+|\s+'\*\*/
 const imageMarkdown = /!\[.*?\]\(.*?\)/g
+const doubleslashRe = /\\\\/g
+const escapedDoubleslashRe = /__double_slash__/g
 
-let assertProto = null
-let matchProto = null
-let lengthProto = null
-let containProto = null
-let existProto = null
-let getMessage = null
-let chaiUtils = null
-let create = null
-let replaceArgMessages = null
-let removeOrKeepSingleQuotesBetweenStars = null
-let setSpecWindowGlobals = null
-let restoreAsserts = null
-let overrideExpect = null
-let overrideChaiAsserts = null
+type CreateFunc = (specWindow: SpecWindow, state: StateFunc, assertFn: $Cy['assert']) => ({
+  chai: Chai.ChaiStatic
+  expect: (val: any, message?: string) => Chai.Assertion
+  assert: any
+})
+export let create: CreateFunc | null = null
 
 chai.use(sinonChai)
 
 chai.use((chai, u) => {
-  chaiUtils = u
+  const chaiUtils = u
 
   $chaiJquery(chai, chaiUtils, {
     onInvalid (method, obj) {
@@ -81,14 +77,14 @@ chai.use((chai, u) => {
     },
   })
 
-  assertProto = chai.Assertion.prototype.assert
-  matchProto = chai.Assertion.prototype.match
-  lengthProto = chai.Assertion.prototype.__methods.length.method
-  containProto = chai.Assertion.prototype.__methods.contain.method
-  existProto = Object.getOwnPropertyDescriptor(chai.Assertion.prototype, 'exist').get
-  const { objDisplay } = chai.util;
+  const assertProto = chai.Assertion.prototype.assert
+  const matchProto = (chai.Assertion.prototype as any).match
+  const lengthProto = (chai.Assertion.prototype as any).__methods.length.method
+  const containProto = (chai.Assertion.prototype as any).__methods.contain.method
+  const existProto = Object.getOwnPropertyDescriptor(chai.Assertion.prototype, 'exist')!.get
+  const { objDisplay } = chai.util
 
-  ({ getMessage } = chai.util)
+  const getMessage = chai.util.getMessage
   const _inspect = chai.util.inspect
 
   const { inspect, setFormatValueHook } = chaiInspect.create(chai)
@@ -102,17 +98,22 @@ chai.use((chai, u) => {
     try {
       val && val.document
       val && val.inspect
-    } catch (e) {
+    } catch (e: any) {
       if (e.stack.indexOf('cross-origin') !== -1 || // chrome
       e.message.indexOf('cross-origin') !== -1) { // firefox
         return `[window]`
       }
     }
+
+    return
   })
+
+  const escapeDoubleSlash = (str: string) => str.replace(doubleslashRe, '__double_slash__')
+  const restoreDoubleSlash = (str: string) => str.replace(escapedDoubleslashRe, '\\\\')
 
   // remove any single quotes between our **,
   // except escaped quotes, empty strings and number strings.
-  removeOrKeepSingleQuotesBetweenStars = (message) => {
+  const removeOrKeepSingleQuotesBetweenStars = (message) => {
     // remove any single quotes between our **, preserving escaped quotes
     // and if an empty string, put the quotes back
     return message.replace(allBetweenFourStars, (match) => {
@@ -143,8 +144,8 @@ chai.use((chai, u) => {
     return message.replace(imageMarkdown, '``$&``')
   }
 
-  replaceArgMessages = (args, str) => {
-    return _.reduce(args, (memo, value, index) => {
+  const replaceArgMessages = (args, str) => {
+    return _.reduce(args, (memo: string[], value, index) => {
       if (_.isString(value)) {
         value = value
         .replace(allWordsBetweenCurlyBraces, '**$1**')
@@ -160,18 +161,17 @@ chai.use((chai, u) => {
       }
 
       return memo
-    }
-    , [])
+    }, [])
   }
 
-  restoreAsserts = function () {
+  const restoreAsserts = function () {
     chai.util.inspect = _inspect
     chai.util.getMessage = getMessage
     chai.util.objDisplay = objDisplay
-    chai.Assertion.prototype.assert = assertProto
-    chai.Assertion.prototype.match = matchProto
-    chai.Assertion.prototype.__methods.length.method = lengthProto
-    chai.Assertion.prototype.__methods.contain.method = containProto
+    chai.Assertion.prototype.assert = assertProto;
+    (chai.Assertion.prototype as any).match = matchProto;
+    (chai.Assertion.prototype as any).__methods.length.method = lengthProto;
+    (chai.Assertion.prototype as any).__methods.contain.method = containProto
 
     return Object.defineProperty(chai.Assertion.prototype, 'exist', { get: existProto })
   }
@@ -212,7 +212,7 @@ chai.use((chai, u) => {
     }
   }
 
-  overrideChaiAsserts = function (specWindow, state, assertFn) {
+  const overrideChaiAsserts = function (specWindow, state: StateFunc, assertFn) {
     chai.Assertion.prototype.assert = createPatchedAssert(specWindow, state, assertFn)
 
     const _origGetmessage = function (obj, args) {
@@ -242,6 +242,9 @@ chai.use((chai, u) => {
       return (flagMsg ? `${flagMsg}: ${msg}` : msg)
     }
 
+    // There are 2 types of getMessage. And we're overriding the second one.
+    // But TypeScript wants us to do both. So we're ignoring this.
+    // @ts-ignore
     chaiUtils.getMessage = function (assert, args) {
       const obj = assert._obj
 
@@ -282,7 +285,9 @@ chai.use((chai, u) => {
           return _super.apply(this, arguments)
         }
 
-        const escText = $utils.escapeQuotes(text)
+        const escText = escapeQuotes(
+          escapeBackslashes(text),
+        )
 
         const selector = `:contains('${escText}'), [type='submit'][value~='${escText}']`
 
@@ -301,13 +306,16 @@ chai.use((chai, u) => {
       })
     }
 
-    const containFn2 = (_super) => {
+    const makeMethodChainable = (_super) => {
       return (function () {
         return _super.apply(this, arguments)
       })
     }
 
-    chai.Assertion.overwriteChainableMethod('contain', containFn1, containFn2)
+    // `makeMethodChainable` doesn't match any type definition,
+    // but it is necessary to make the method chainable.
+    // @ts-ignore
+    chai.Assertion.overwriteChainableMethod('contain', containFn1, makeMethodChainable)
 
     chai.Assertion.overwriteChainableMethod('length',
       (_super) => {
@@ -340,7 +348,7 @@ chai.use((chai, u) => {
               length,
               obj.length,
             )
-          } catch (e1) {
+          } catch (e1: any) {
             e1.node = node
             e1.negated = chaiUtils.flag(this, 'negate')
             e1.type = 'length'
@@ -371,21 +379,21 @@ chai.use((chai, u) => {
           }
         })
       },
+      // `makeMethodChainable` doesn't match any type definition,
+      // but it is necessary to make the method chainable.
+      // @ts-ignore
+      makeMethodChainable)
 
-      (_super) => {
-        return (function () {
-          return _super.apply(this, arguments)
-        })
-      })
-
-    return chai.Assertion.overwriteProperty('exist', (_super) => {
+    // _super is not documented.
+    // @ts-ignore
+    chai.Assertion.overwriteProperty('exist', (_super) => {
       return (function () {
         const obj = this._obj
 
         if (!($dom.isJquery(obj) || $dom.isElement(obj))) {
           try {
             return _super.apply(this, arguments)
-          } catch (e) {
+          } catch (e: any) {
             e.type = 'existence'
             throw e
           }
@@ -406,7 +414,7 @@ chai.use((chai, u) => {
               node,
               node,
             )
-          } catch (e1) {
+          } catch (e1: any) {
             e1.node = node
             e1.negated = chaiUtils.flag(this, 'negate')
             e1.type = 'existence'
@@ -431,7 +439,7 @@ chai.use((chai, u) => {
     })
   }
 
-  const captureUserInvocationStack = (specWindow, state, ssfi) => {
+  const captureUserInvocationStack = (specWindow: SpecWindow, state: StateFunc, ssfi) => {
     // we need a user invocation stack with the top line being the point where
     // the error occurred for the sake of the code frame
     // in chrome, stack lines from another frame don't appear in the
@@ -447,23 +455,25 @@ chai.use((chai, u) => {
     state('currentAssertionUserInvocationStack', userInvocationStack)
   }
 
-  const createPatchedAssert = (specWindow, state, assertFn) => {
+  const createPatchedAssert = (specWindow, state: StateFunc, assertFn) => {
     return (function (...args) {
       let err
-      const passed = chaiUtils.test(this, args)
+      const passed = chaiUtils.test(this, args as Chai.AssertionArgs)
       const value = chaiUtils.flag(this, 'object')
       const expected = args[3]
 
       const customArgs = replaceArgMessages(args, this._obj)
 
-      let message = chaiUtils.getMessage(this, customArgs)
-      const actual = chaiUtils.getActual(this, customArgs)
+      let message = chaiUtils.getMessage(this, customArgs as Chai.AssertionArgs)
+      const actual = chaiUtils.getActual(this, customArgs as Chai.AssertionArgs)
 
+      message = escapeDoubleSlash(message)
       message = removeOrKeepSingleQuotesBetweenStars(message)
+      message = restoreDoubleSlash(message)
       message = escapeMarkdown(message)
 
       try {
-        assertProto.apply(this, args)
+        assertProto.apply(this, args as Chai.AssertionArgs)
       } catch (e) {
         err = e
       }
@@ -483,7 +493,7 @@ chai.use((chai, u) => {
     })
   }
 
-  overrideExpect = (specWindow, state) => {
+  const overrideExpect = (specWindow, state: StateFunc) => {
     // only override assertions for this specific
     // expect function instance so we do not affect
     // the outside world
@@ -495,7 +505,7 @@ chai.use((chai, u) => {
     }
   }
 
-  const overrideAssert = function (specWindow, state) {
+  const overrideAssert = function (specWindow, state: StateFunc) {
     const fn = (express, errmsg) => {
       state('assertUsed', true)
       captureUserInvocationStack(specWindow, state, fn)
@@ -517,7 +527,7 @@ chai.use((chai, u) => {
     return fn
   }
 
-  setSpecWindowGlobals = function (specWindow, state) {
+  const setSpecWindowGlobals = function (specWindow, state: StateFunc) {
     const expect = overrideExpect(specWindow, state)
     const assert = overrideAssert(specWindow, state)
 
@@ -532,7 +542,7 @@ chai.use((chai, u) => {
     }
   }
 
-  create = function (specWindow, state, assertFn) {
+  create = function (specWindow: SpecWindow, state: StateFunc, assertFn: $Cy['assert']) {
     restoreAsserts()
 
     overrideChaiInspect()
@@ -543,12 +553,6 @@ chai.use((chai, u) => {
   }
 })
 
-export default {
-  create,
-  replaceArgMessages,
-  removeOrKeepSingleQuotesBetweenStars,
-  setSpecWindowGlobals,
-  restoreAsserts,
-  overrideExpect,
-  overrideChaiAsserts,
+export interface IChai {
+  expect: ReturnType<CreateFunc>['expect']
 }

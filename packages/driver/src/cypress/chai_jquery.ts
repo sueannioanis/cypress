@@ -1,4 +1,3 @@
-// @ts-nocheck
 import _ from 'lodash'
 import $ from 'jquery'
 import $dom from '../dom'
@@ -33,7 +32,12 @@ const maybeCastNumberToString = (num) => {
   return _.isFinite(num) ? `${num}` : num
 }
 
-export const $chaiJquery = (chai, chaiUtils, callbacks = {}) => {
+interface Callbacks {
+  onInvalid: (method, obj) => void
+  onError: (err, method, obj, negated) => void
+}
+
+export const $chaiJquery = (chai, chaiUtils, callbacks: Callbacks) => {
   const { inspect, flag } = chaiUtils
 
   const assertDom = (ctx, method, ...args) => {
@@ -63,7 +67,7 @@ export const $chaiJquery = (chai, chaiUtils, callbacks = {}) => {
         // From jQuery 3.x .selector API is deprecated. (https://api.jquery.com/selector/)
         // Because of that, wrap() above removes selector property.
         // That's why we're caching the value of selector above and using it here.
-        ctx._obj = selector
+        ctx._obj = selector ?? 'subject'
         // if no element found, fail the existence check
         // depends on the negate flag
         ctx.assert(!!ctx.__flags.negate, ...args)

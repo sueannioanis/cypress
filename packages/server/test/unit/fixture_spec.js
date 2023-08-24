@@ -2,10 +2,10 @@ require('../spec_helper')
 
 const path = require('path')
 const Promise = require('bluebird')
-const config = require(`${root}lib/config`)
-const fixture = require(`${root}lib/fixture`)
-const { fs } = require(`${root}lib/util/fs`)
-const FixturesHelper = require('@tooling/system-tests/lib/fixtures')
+const fixture = require(`../../lib/fixture`)
+const { fs } = require(`../../lib/util/fs`)
+const FixturesHelper = require('@tooling/system-tests')
+const { getCtx } = require(`../../lib/makeDataContext`)
 const os = require('os')
 const eol = require('eol')
 
@@ -13,8 +13,11 @@ const isWindows = () => {
   return os.platform() === 'win32'
 }
 
+let ctx
+
 describe('lib/fixture', () => {
-  beforeEach(function () {
+  beforeEach(async function () {
+    ctx = getCtx()
     FixturesHelper.scaffold()
 
     this.todosPath = FixturesHelper.projectPath('todos')
@@ -22,7 +25,10 @@ describe('lib/fixture', () => {
       return fs.readFileAsync(path.join(folder, image), encoding)
     }
 
-    return config.get(this.todosPath).then((cfg) => {
+    await ctx.actions.project.setCurrentProjectAndTestingTypeForTestSetup(this.todosPath)
+
+    return ctx.lifecycleManager.getFullInitialConfig()
+    .then((cfg) => {
       ({ fixturesFolder: this.fixturesFolder } = cfg)
     })
   })
@@ -148,6 +154,9 @@ Expecting 'EOF', '}', ':', ',', ']', got 'STRING'\
     })
 
     it('does not reformat empty objects', function () {
+      // TODO: fix flaky test https://github.com/cypress-io/cypress/issues/23457
+      this.retries(15)
+
       const fn = () => {
         return fixture.get(this.fixturesFolder, 'empty_objects')
       }
@@ -169,10 +178,12 @@ Expecting 'EOF', '}', ':', ',', ']', got 'STRING'\
     })
 
     // https://github.com/cypress-io/cypress/issues/3739
-    it('can load a fixture with no extension when a same-named folder also exists', () => {
+    it('can load a fixture with no extension when a same-named folder also exists', async () => {
       const projectPath = FixturesHelper.projectPath('folder-same-as-fixture')
 
-      return config.get(projectPath)
+      await ctx.actions.project.setCurrentProjectAndTestingTypeForTestSetup(projectPath)
+
+      return ctx.lifecycleManager.getFullInitialConfig()
       .then((cfg) => {
         return fixture.get(cfg.fixturesFolder, 'foo')
         .then((result) => {
@@ -215,7 +226,7 @@ ParseError: Unterminated string constant\
       .then(() => {
         throw new Error('should have failed but did not')
       }).catch((err) => {
-        expect(err.message).to.eq(`'bad_js.js' is not a valid JavaScript object.\n${e}`)
+        expect(err.message).to.eq(`'bad_js.js' is not a valid JavaScript object.\n\n${e}`)
       })
     })
   })

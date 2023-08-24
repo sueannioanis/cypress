@@ -1,5 +1,11 @@
 <p align="center">
-  <a href="https://www.cypress.io"><img src="https://cloud.githubusercontent.com/assets/1268976/20607953/d7ae489c-b24a-11e6-9cc4-91c6c74c5e88.png"/></a>
+  <a href="https://www.cypress.io">
+    <picture>
+      <source media="(prefers-color-scheme: dark)"  srcset="./assets/cypress-logo-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./assets/cypress-logo-light.png">
+      <img alt="Cypress Logo" src="./assets/cypress-logo-light.png">
+    </picture>    
+  </a>
 </p>
 <p align="center">
   <a href="https://on.cypress.io">Documentation</a> |
@@ -15,6 +21,11 @@
   Fast, easy and reliable testing for anything that runs in a browser.
 </p>
 <p align="center">
+  <a href="https://bit.ly/3P7ufFf">
+    <img alt="Cypress Conf Link" src="https://github-production-user-asset-6210df.s3.amazonaws.com/1087311/261085338-e2915eb2-13da-4ca6-b909-f835c6b6074d.jpeg" width="40%" height="40%" />
+  </a>
+</p>
+<p align="center">
   Join us, we're <a href="https://cypress.io/jobs">hiring</a>.
 </p>
 
@@ -22,8 +33,8 @@
   <a href="https://www.npmjs.com/package/cypress">
     <img src="https://img.shields.io/npm/dm/cypress.svg" alt="npm"/>
   </a>
-  <a href="https://gitter.im/cypress-io/cypress">
-    <img src="https://img.shields.io/gitter/room/cypress-io/cypress.svg" alt="Gitter chat"/>
+  <a href="https://on.cypress.io/discord">
+    <img src="https://img.shields.io/badge/chat-on%20Discord-brightgreen" alt="Discord chat"/>
   </a>
     <a href="https://stackshare.io/cypress">
     <img src="https://img.stackshare.io/misc/follow-on-stackshare-badge.svg" alt="StackShare"/>
@@ -42,7 +53,7 @@
 
 [![npm version](https://badge.fury.io/js/cypress.svg)](https://badge.fury.io/js/cypress)
 
-Install Cypress for Mac, Linux, or Windows, then [get started](https://docs.cypress.io/guides/getting-started/installing-cypress.html).
+Install Cypress for Mac, Linux, or Windows, then [get started](https://on.cypress.io/install).
 
 ```bash
 npm install cypress --save-dev
@@ -57,20 +68,30 @@ yarn add cypress --dev
 
 ## Contributing
 
-- [![CircleCI](https://circleci.com/gh/cypress-io/cypress/tree/develop.svg?style=svg)](https://circleci.com/gh/cypress-io/cypress/tree/develop) - `develop` branch
-- [![CircleCI](https://circleci.com/gh/cypress-io/cypress/tree/master.svg?style=svg)](https://circleci.com/gh/cypress-io/cypress/tree/master) - `master` branch
+[![cypress](https://img.shields.io/endpoint?url=https://cloud.cypress.io/badge/simple/ypt4pf/develop&style=flat&logo=cypress)](https://cloud.cypress.io/projects/ypt4pf/runs)
+[![CircleCI](https://circleci.com/gh/cypress-io/cypress/tree/develop.svg?style=svg)](https://circleci.com/gh/cypress-io/cypress/tree/develop) -  `develop` branch
 
 Please see our [Contributing Guideline](./CONTRIBUTING.md) which explains repo organization, linting, testing, and other steps.
 
+## How we work
+
+At Cypress we value our community and strive to be as open and transparent with them as possible.  Check out [our guide](./cypress-prioritization-and-triage.md) on how we prioritize community issues.
+
 ## License
 
-[![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/cypress-io/cypress/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/cypress-io/cypress/blob/develop/LICENSE)
 
 This project is licensed under the terms of the [MIT license](/LICENSE).
 
 ## Badges
 
-Let the world know your project is using Cypress.io to test with this cool badge
+Configure a badge for your project's README to show your test status or test count in the [Cypress Cloud](https://www.cypress.io/cloud).
+
+[![cypress](https://img.shields.io/endpoint?url=https://cloud.cypress.io/badge/simple/ypt4pf/develop&style=flat&logo=cypress)](https://cloud.cypress.io/projects/ypt4pf/runs)
+
+[![cypress](https://img.shields.io/endpoint?url=https://cloud.cypress.io/badge/count/ypt4pf/develop&style=flat&logo=cypress)](https://cloud.cypress.io/projects/ypt4pf/runs)
+
+Or let the world know your project is using Cypress with the badge below.
 
 [![Cypress.io](https://img.shields.io/badge/tested%20with-Cypress-04C38E.svg)](https://www.cypress.io/)
 

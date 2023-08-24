@@ -1,6 +1,9 @@
 exports['e2e system node uses system node when launching plugins file 1'] = `
-Deprecation Warning: \`nodeVersion\` is currently set to \`system\` in the \`cypress.json\` configuration file. As of Cypress version \`9.0.0\` the default behavior of \`nodeVersion\` has changed to always use the version of Node used to start cypress via the cli.
-Please remove the \`nodeVersion\` configuration option from \`cypress.json\`.
+Deprecation Warning: nodeVersion is currently set to system in the cypress.config.js configuration file.
+
+As of Cypress version 9.0.0 the default behavior of nodeVersion has changed to always use the version of Node used to start cypress via the cli.
+
+Please remove the nodeVersion configuration option from cypress.config.js.
 
 
 ====================================================================================================
@@ -12,7 +15,7 @@ Please remove the \`nodeVersion\` configuration option from \`cypress.json\`.
   │ Browser:        FooBrowser 88                                                                  │
   │ Node Version:   vX (/foo/bar/node)                                                             │
   │ Specs:          1 found (system.spec.js)                                                       │
-  │ Searched:       cypress/integration/system.spec.js                                             │
+  │ Searched:       cypress/e2e/system.spec.js                                                     │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
@@ -43,8 +46,7 @@ Please remove the \`nodeVersion\` configuration option from \`cypress.json\`.
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/system.spec.js.mp4                  (X second)
+  -  Video output: /XXX/XXX/XXX/cypress/videos/system.spec.js.mp4
 
 
 ====================================================================================================
@@ -62,8 +64,13 @@ Please remove the \`nodeVersion\` configuration option from \`cypress.json\`.
 `
 
 exports['e2e system node uses bundled node when launching plugins file 1'] = `
-Deprecation Warning: \`nodeVersion\` is currently set to \`bundled\` in the \`cypress.json\` configuration file. As of Cypress version \`9.0.0\` the default behavior of \`nodeVersion\` has changed to always use the version of Node used to start cypress via the cli. When \`nodeVersion\` is set to \`bundled\`, Cypress will use the version of Node bundled with electron. This can cause problems running certain plugins or integrations. 
-As the \`nodeVersion\` configuration option will be removed in a future release, it is recommended to remove the \`nodeVersion\` configuration option from \`cypress.json\`.
+Deprecation Warning: nodeVersion is currently set to bundled in the cypress.config.js configuration file.
+
+As of Cypress version 9.0.0 the default behavior of nodeVersion has changed to always use the version of Node used to start cypress via the cli.
+
+When nodeVersion is set to bundled, Cypress will use the version of Node bundled with electron. This can cause problems running certain plugins or integrations.
+
+As the nodeVersion configuration option will be removed in a future release, it is recommended to remove the nodeVersion configuration option from cypress.config.js.
 
 
 ====================================================================================================
@@ -74,7 +81,7 @@ As the \`nodeVersion\` configuration option will be removed in a future release,
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
   │ Specs:      1 found (bundled.spec.js)                                                          │
-  │ Searched:   cypress/integration/bundled.spec.js                                                │
+  │ Searched:   cypress/e2e/bundled.spec.js                                                        │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
@@ -105,8 +112,7 @@ As the \`nodeVersion\` configuration option will be removed in a future release,
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/bundled.spec.js.mp4                 (X second)
+  -  Video output: /XXX/XXX/XXX/cypress/videos/bundled.spec.js.mp4
 
 
 ====================================================================================================
@@ -134,7 +140,7 @@ exports['e2e system node uses default node when launching plugins file 1'] = `
   │ Browser:        FooBrowser 88                                                                  │
   │ Node Version:   vX (/foo/bar/node)                                                             │
   │ Specs:          1 found (default.spec.js)                                                      │
-  │ Searched:       cypress/integration/default.spec.js                                            │
+  │ Searched:       cypress/e2e/default.spec.js                                                    │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
@@ -165,8 +171,7 @@ exports['e2e system node uses default node when launching plugins file 1'] = `
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/default.spec.js.mp4                 (X second)
+  -  Video output: /XXX/XXX/XXX/cypress/videos/default.spec.js.mp4
 
 
 ====================================================================================================

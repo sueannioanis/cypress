@@ -7,9 +7,9 @@ exports['e2e record passing passes 1'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      4 found (record_error_spec.js, record_fail_spec.js, record_pass_spec.js, record_un │
-  │             caught_spec.js)                                                                    │
-  │ Searched:   cypress/integration/record*                                                        │
+  │ Specs:      4 found (record_error.cy.js, record_fail.cy.js, record_pass.cy.js, record_uncaught │
+  │             .cy.js)                                                                            │
+  │ Searched:   cypress/e2e/record*                                                                │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -17,29 +17,17 @@ exports['e2e record passing passes 1'] = `
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_error_spec.js                                                            (1 of 4)
-  Estimated: 8 seconds
+  Running:  record_error.cy.js                                                              (1 of 4)
+  Estimated: X second(s)
 
 Oops...we found an error preparing this test file:
 
-  cypress/integration/record_error_spec.js
+  > cypress/e2e/record_error.cy.js
 
 The error was:
 
 Error: Webpack Compilation Error
-./cypress/integration/record_error_spec.js
-Module not found: Error: Can't resolve '../it/does/not/exist' in '/foo/bar/.projects/e2e/cypress/integration'
-Looked for and couldn't find the file at the following paths:
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.js]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.json]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.jsx]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.mjs]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.coffee]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.ts]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.tsx]
- @ ./cypress/integration/record_error_spec.js 3:0-31
- 
+Module not found: Error: Can't resolve '../it/does/not/exist' in '/foo/bar/.projects/e2e/cypress/e2e'
       [stack trace lines]
 
 This occurred while Cypress was compiling and bundling your test code. This is usually caused by:
@@ -60,25 +48,27 @@ Fix the error in your code and re-run your tests.
   │ Screenshots:  0                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_error_spec.js                                                             │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_error.cy.js                                                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/record_error_spec.js.mp4            (X second)
+  -  Started compressing: Compressing to 32 CRF                                                     
+  -  Finished compressing: X second(s)                                               
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_error.cy.js.mp4
 
 
-  (Uploading Results)
+  (Uploading Screenshots & Videos)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/videos/record_error_spec.js.mp4
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/videos/record_error.cy.js.mp4
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_fail_spec.js                                                             (2 of 4)
-  Estimated: 8 seconds
+  Running:  record_fail.cy.js                                                               (2 of 4)
+  Estimated: X second(s)
 
 
   record fails
@@ -109,32 +99,34 @@ Because this error occurred during a \`before each\` hook we are skipping the re
   │ Screenshots:  1                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_fail_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_fail.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_fail_spec.js/record fails -- fails 1 --      (1280x720)
-     before each hook (failed).png                                                                  
+  -  /XXX/XXX/XXX/cypress/screenshots/record_fail.cy.js/record fails -- fails 1 -- be     (1280x720)
+     fore each hook (failed).png                                                                    
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/record_fail_spec.js.mp4             (X second)
+  -  Started compressing: Compressing to 32 CRF                                                     
+  -  Finished compressing: X second(s)                                               
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_fail.cy.js.mp4
 
 
-  (Uploading Results)
+  (Uploading Screenshots & Videos)
 
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_fail_spec.js/record fails -- fails 1 -- before each hook (failed).png
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_fail_spec.js.mp4
+  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_fail.cy.js/record fails -- fails 1 -- before each hook (failed).png
+  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_fail.cy.js.mp4
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (3 of 4)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (3 of 4)
+  Estimated: X second(s)
 
 
   record pass
@@ -156,26 +148,31 @@ plugin stdout
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_uncaught_spec.js                                                         (4 of 4)
-  Estimated: 8 seconds
+  Running:  record_uncaught.cy.js                                                           (4 of 4)
+  Estimated: X second(s)
 
 
   1) An uncaught error was detected outside of a test
@@ -209,27 +206,29 @@ We dynamically generated a new test to display this failure.
   │ Screenshots:  1                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_uncaught_spec.js                                                          │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_uncaught.cy.js                                                            │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_uncaught_spec.js/An uncaught error was d     (1280x720)
-     etected outside of a test (failed).png                                                         
+  -  /XXX/XXX/XXX/cypress/screenshots/record_uncaught.cy.js/An uncaught error was det     (1280x720)
+     ected outside of a test (failed).png                                                           
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/record_uncaught_spec.js.mp4         (X second)
+  -  Started compressing: Compressing to 32 CRF                                                     
+  -  Finished compressing: X second(s)                                               
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_uncaught.cy.js.mp4
 
 
-  (Uploading Results)
+  (Uploading Screenshots & Videos)
 
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_uncaught_spec.js/An uncaught error was detected outside of a test (failed).png
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_uncaught_spec.js.mp4
+  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_uncaught.cy.js/An uncaught error was detected outside of a test (failed).png
+  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_uncaught.cy.js.mp4
 
 ====================================================================================================
 
@@ -238,36 +237,36 @@ We dynamically generated a new test to display this failure.
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✖  record_error_spec.js                     XX:XX        -        -        1        -        - │
+  │ ✖  record_error.cy.js                       XX:XX        -        -        1        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✖  record_fail_spec.js                      XX:XX        2        -        1        -        1 │
+  │ ✖  record_fail.cy.js                        XX:XX        2        -        1        -        1 │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✖  record_uncaught_spec.js                  XX:XX        1        -        1        -        - │
+  │ ✖  record_uncaught.cy.js                    XX:XX        1        -        1        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✖  3 of 4 failed (75%)                      XX:XX        5        1        3        1        1  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
 
 exports['e2e record api interaction errors project 404 errors and exits 1'] = `
-We could not find a project with the ID: pid123
+We could not find a Cypress Cloud project with the projectId: pid123
 
-This projectId came from your 'cypress.json' file or an environment variable.
+This projectId came from your cypress-with-project-id.config.js file or an environment variable.
 
-Please log into the Dashboard and find your project.
+Please log into Cypress Cloud and find your project.
 
 We will list the correct projectId in the 'Settings' tab.
 
-Alternatively, you can create a new project using the Desktop Application.
+Alternatively, you can create a new project directly from within the Cypress app.
 
-https://on.cypress.io/dashboard
+https://on.cypress.io/cloud
 
 `
 
@@ -280,8 +279,8 @@ exports['e2e record api interaction errors update instance stdout warns but proc
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -289,129 +288,8 @@ exports['e2e record api interaction errors update instance stdout warns but proc
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
-
-
-  record pass
-    ✓ passes
-    - is pending
-
-
-  1 passing
-  1 pending
-
-
-  (Results)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        2                                                                                │
-  │ Passing:      1                                                                                │
-  │ Failing:      0                                                                                │
-  │ Pending:      1                                                                                │
-  │ Skipped:      0                                                                                │
-  │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Screenshots)
-
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
-
-
-  (Uploading Results)
-
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
-Warning: We encountered an error talking to our servers.
-
-This run will not be recorded.
-
-This error will not alter the exit code.
-
-StatusCodeError: 500 - "Internal Server Error"
-
-====================================================================================================
-
-  (Run Finished)
-
-
-       Spec                                              Tests  Passing  Failing  Pending  Skipped  
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✔  All specs passed!                        XX:XX        2        1        -        1        -  
-
-
-───────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                       
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
-
-
-`
-
-exports['e2e record recordKey errors and exits without recordKey 1'] = `
-You passed the --record flag but did not provide us your Record Key.
-
-You can pass us your Record Key like this:
-
-  cypress run --record --key <record_key>
-
-You can also set the key as an environment variable with the name CYPRESS_RECORD_KEY.
-
-https://on.cypress.io/how-do-i-record-runs
-
-`
-
-exports['e2e record projectId errors and exits without projectId 1'] = `
-You passed the --record flag but this project has not been setup to record.
-
-This project is missing the 'projectId' inside of 'cypress.json'.
-
-We cannot uniquely identify this project without this id.
-
-You need to setup this project to record. This will generate a unique 'projectId'.
-
-Alternatively if you omit the --record flag this project will run without recording.
-
-https://on.cypress.io/recording-project-runs
-
-`
-
-exports['e2e record api interaction errors recordKey and projectId errors and exits on 401 1'] = `
-Your Record Key f858a...ee7e1 is not valid with this project: pid123
-
-It may have been recently revoked by you or another user.
-
-Please log into the Dashboard to see the valid record keys.
-
-https://on.cypress.io/dashboard/projects/pid123
-
-`
-
-exports['e2e record video recording does not upload when not enabled 1'] = `
-
-====================================================================================================
-
-  (Run Starting)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Cypress:    1.2.3                                                                              │
-  │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
-  │ Params:     Tag: false, Group: false, Parallel: false                                          │
-  │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                    
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -434,19 +312,31 @@ exports['e2e record video recording does not upload when not enabled 1'] = `
   │ Screenshots:  1                                                                                │
   │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
+Warning: We encountered an error communicating with our servers.
+
+This run will proceed, but will not be recorded.
+
+This error will not affect or change the exit code.
+
+StatusCodeError: 500 - "Internal Server Error"
 
 ====================================================================================================
 
@@ -455,15 +345,54 @@ exports['e2e record video recording does not upload when not enabled 1'] = `
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
+
+`
+
+exports['e2e record recordKey errors and exits without recordKey 1'] = `
+You passed the --record flag but did not provide us your Record Key.
+
+You can pass us your Record Key like this:
+
+  $ cypress run --record --key <record_key>
+
+You can also set the key as an environment variable with the name: CYPRESS_RECORD_KEY
+
+https://on.cypress.io/how-do-i-record-runs
+
+`
+
+exports['e2e record projectId errors and exits without projectId 1'] = `
+You passed the --record flag but this project has not been setup to record.
+
+This project is missing the projectId inside of: cypress.config.js
+
+We cannot uniquely identify this project without this id.
+
+You need to setup this project to record. This will generate a unique projectId.
+
+Alternatively if you omit the --record flag this project will run without recording.
+
+https://on.cypress.io/recording-project-runs
+
+`
+
+exports['e2e record api interaction errors recordKey and projectId errors and exits on 401 1'] = `
+Your Record Key f858a...ee7e1 is not valid with this projectId: pid123
+
+It may have been recently revoked by you or another user.
+
+Please log into Cypress Cloud to see the valid Record Keys.
+
+https://on.cypress.io/dashboard/projects/pid123
 
 `
 
@@ -476,8 +405,8 @@ exports['e2e record api interaction errors uploading assets warns but proceeds 1
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -485,8 +414,8 @@ exports['e2e record api interaction errors uploading assets warns but proceeds 1
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -509,26 +438,25 @@ exports['e2e record api interaction errors uploading assets warns but proceeds 1
   │ Screenshots:  1                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/record_pass_spec.js.mp4             (X second)
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
 
 
-  (Uploading Results)
+  (Uploading Screenshots & Videos)
 
-  - Failed Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
-  - Failed Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_pass_spec.js.mp4
+  - Failed Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
+  - Failed Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_pass.cy.js.mp4
 
 ====================================================================================================
 
@@ -537,14 +465,14 @@ exports['e2e record api interaction errors uploading assets warns but proceeds 1
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -552,24 +480,20 @@ exports['e2e record api interaction errors uploading assets warns but proceeds 1
 exports['e2e record misconfiguration errors and exits when no specs found 1'] = `
 Can't run because no spec files were found.
 
-We searched for any files matching this glob pattern:
+We searched for specs matching this glob pattern:
 
-cypress/integration/notfound/**
-
-Relative to the project root folder:
-
-/foo/bar/.projects/e2e
+  > /foo/bar/.projects/e2e/cypress/e2e/notfound/**
 
 `
 
 exports['e2e record recordKey warns but does not exit when is forked pr 1'] = `
 Warning: It looks like you are trying to record this run from a forked PR.
 
-The 'Record Key' is missing. Your CI provider is likely not passing private environment variables to builds from forks.
+The Record Key is missing. Your CI provider is likely not passing private environment variables to builds from forks.
 
 These results will not be recorded.
 
-This error will not alter the exit code.
+This error will not affect or change the exit code.
 
 ====================================================================================================
 
@@ -578,14 +502,14 @@ This error will not alter the exit code.
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
+  Running:  record_pass.cy.js                                                               (1 of 1)
 
 
   record pass
@@ -606,15 +530,20 @@ This error will not alter the exit code.
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
+
+
+  (Video)
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
 
 
 ====================================================================================================
@@ -624,300 +553,9 @@ This error will not alter the exit code.
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
-
-
-`
-
-exports['e2e record parallelization passes in parallel with group 1'] = `
-
-====================================================================================================
-
-  (Run Starting)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Cypress:    1.2.3                                                                              │
-  │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      4 found (record_error_spec.js, record_fail_spec.js, record_pass_spec.js, record_un │
-  │             caught_spec.js)                                                                    │
-  │ Searched:   cypress/integration/record*                                                        │
-  │ Params:     Tag: nightly, Group: prod-e2e, Parallel: true                                      │
-  │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                    
-  Running:  record_pass_spec.js                                                             (1 of 4)
-  Estimated: 1 second
-
-
-  record pass
-    ✓ passes
-    - is pending
-
-
-  1 passing
-  1 pending
-
-
-  (Results)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        2                                                                                │
-  │ Passing:      1                                                                                │
-  │ Failing:      0                                                                                │
-  │ Pending:      1                                                                                │
-  │ Skipped:      0                                                                                │
-  │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     X seconds                                                                        │
-  │ Estimated:    1 second                                                                         │
-  │ Spec Ran:     record_pass_spec.js                                                              │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Screenshots)
-
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
-
-
-  (Uploading Results)
-
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
-
-====================================================================================================
-
-  (Run Finished)
-
-
-       Spec                                              Tests  Passing  Failing  Pending  Skipped  
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✔  All specs passed!                        XX:XX        2        1        -        1        -  
-
-
-───────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                       
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
-
-
-`
-
-exports['e2e record parallelization passes in parallel with group 2'] = `
-
-====================================================================================================
-
-  (Run Starting)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Cypress:    1.2.3                                                                              │
-  │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      4 found (record_error_spec.js, record_fail_spec.js, record_pass_spec.js, record_un │
-  │             caught_spec.js)                                                                    │
-  │ Searched:   cypress/integration/record*                                                        │
-  │ Params:     Tag: nightly, Group: prod-e2e, Parallel: true                                      │
-  │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                    
-  Running:  record_error_spec.js                                                            (2 of 4)
-  Estimated: 1 second
-
-Oops...we found an error preparing this test file:
-
-  cypress/integration/record_error_spec.js
-
-The error was:
-
-Error: Webpack Compilation Error
-./cypress/integration/record_error_spec.js
-Module not found: Error: Can't resolve '../it/does/not/exist' in '/foo/bar/.projects/e2e/cypress/integration'
-Looked for and couldn't find the file at the following paths:
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.js]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.json]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.jsx]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.mjs]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.coffee]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.ts]
-[/foo/bar/.projects/e2e/cypress/it/does/not/exist.tsx]
- @ ./cypress/integration/record_error_spec.js 3:0-31
- 
-      [stack trace lines]
-
-This occurred while Cypress was compiling and bundling your test code. This is usually caused by:
-
-- A missing file or dependency
-- A syntax error in the file or one of its dependencies
-
-Fix the error in your code and re-run your tests.
-
-  (Results)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        0                                                                                │
-  │ Passing:      0                                                                                │
-  │ Failing:      1                                                                                │
-  │ Pending:      0                                                                                │
-  │ Skipped:      0                                                                                │
-  │ Screenshots:  0                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     X seconds                                                                        │
-  │ Estimated:    1 second                                                                         │
-  │ Spec Ran:     record_error_spec.js                                                             │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Video)
-
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/record_error_spec.js.mp4            (X second)
-
-
-  (Uploading Results)
-
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/videos/record_error_spec.js.mp4
-
-────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                    
-  Running:  record_fail_spec.js                                                             (3 of 4)
-  Estimated: 2 seconds
-
-
-  record fails
-    1) "before each" hook for "fails 1"
-
-
-  0 passing
-  1 failing
-
-  1) record fails
-       "before each" hook for "fails 1":
-     Error: foo
-
-Because this error occurred during a \`before each\` hook we are skipping the remaining tests in the current suite: \`record fails\`
-      [stack trace lines]
-
-
-
-
-  (Results)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        2                                                                                │
-  │ Passing:      0                                                                                │
-  │ Failing:      1                                                                                │
-  │ Pending:      0                                                                                │
-  │ Skipped:      1                                                                                │
-  │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     X seconds                                                                        │
-  │ Estimated:    2 seconds                                                                        │
-  │ Spec Ran:     record_fail_spec.js                                                              │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Screenshots)
-
-  -  /XXX/XXX/XXX/cypress/screenshots/record_fail_spec.js/record fails -- fails 1 --      (1280x720)
-     before each hook (failed).png                                                                  
-
-
-  (Video)
-
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/record_fail_spec.js.mp4             (X second)
-
-
-  (Uploading Results)
-
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_fail_spec.js/record fails -- fails 1 -- before each hook (failed).png
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_fail_spec.js.mp4
-
-────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                    
-  Running:  record_uncaught_spec.js                                                         (4 of 4)
-  Estimated: 3 seconds
-
-
-  1) An uncaught error was detected outside of a test
-
-  0 passing
-  1 failing
-
-  1) An uncaught error was detected outside of a test:
-     Error: The following error originated from your test code, not from Cypress.
-
-  > instantly fails
-
-When Cypress detects uncaught errors originating from your test code it will automatically fail the current test.
-
-Cypress could not associate this error to any specific test.
-
-We dynamically generated a new test to display this failure.
-      [stack trace lines]
-
-
-
-
-  (Results)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        1                                                                                │
-  │ Passing:      0                                                                                │
-  │ Failing:      1                                                                                │
-  │ Pending:      0                                                                                │
-  │ Skipped:      0                                                                                │
-  │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     X seconds                                                                        │
-  │ Estimated:    3 seconds                                                                        │
-  │ Spec Ran:     record_uncaught_spec.js                                                          │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Screenshots)
-
-  -  /XXX/XXX/XXX/cypress/screenshots/record_uncaught_spec.js/An uncaught error was d     (1280x720)
-     etected outside of a test (failed).png                                                         
-
-
-  (Video)
-
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/record_uncaught_spec.js.mp4         (X second)
-
-
-  (Uploading Results)
-
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_uncaught_spec.js/An uncaught error was detected outside of a test (failed).png
-  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_uncaught_spec.js.mp4
-
-====================================================================================================
-
-  (Run Finished)
-
-
-       Spec                                              Tests  Passing  Failing  Pending  Skipped  
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✖  record_error_spec.js                     XX:XX        -        -        1        -        - │
-  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✖  record_fail_spec.js                      XX:XX        2        -        1        -        1 │
-  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✖  record_uncaught_spec.js                  XX:XX        1        -        1        -        - │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✖  3 of 3 failed (100%)                     XX:XX        3        -        3        -        1  
-
-
-───────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                       
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
 
 
 `
@@ -925,7 +563,7 @@ We dynamically generated a new test to display this failure.
 exports['e2e record api interaction errors create run 422 errors and exits when group name is in use 1'] = `
 You passed the --group flag, but this group name has already been used for this run.
 
-The existing run is: https://dashboard.cypress.io/runs/12345
+The existing run is: https://cloud.cypress.io/runs/12345
 
 The --group flag you passed was: e2e-tests
 
@@ -936,16 +574,7 @@ https://on.cypress.io/run-group-name-not-unique
 `
 
 exports['e2e record api interaction errors create run unknown 422 errors and exits when there is an unknown 422 response 1'] = `
-We encountered an unexpected error talking to our servers.
-
-There is likely something wrong with the request.
-
-The --tag flag you passed was: nightly
-The --group flag you passed was: e2e-tests
-The --parallel flag you passed was: true
-The --ciBuildId flag you passed was: ciBuildId123
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 422
 
@@ -954,19 +583,24 @@ StatusCodeError: 422
   "message": "An unknown message here from the server."
 }
 
+There is likely something wrong with the request.
+
+The --tag flag you passed was: nightly
+The --group flag you passed was: e2e-tests
+The --parallel flag you passed was: true
+The --ciBuildId flag you passed was: ciBuildId123
+
 `
 
 exports['e2e record api interaction errors create run 500 does not proceed and exits with error when parallelizing 1'] = `
-We encountered an unexpected error talking to our servers.
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
 
 Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
 
 The --group flag you passed was: foo
 The --ciBuildId flag you passed was: ciBuildId123
-
-The server's response was:
-
-StatusCodeError: 500 - "Internal Server Error"
 
 `
 
@@ -979,22 +613,20 @@ exports['e2e record api interaction errors create instance 500 does not proceed 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: nightly, Group: foo, Parallel: true                                           │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-We encountered an unexpected error talking to our servers.
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
 
 Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
 
 The --group flag you passed was: foo
 The --ciBuildId flag you passed was: ciBuildId123
-
-The server's response was:
-
-StatusCodeError: 500 - "Internal Server Error"
 
 `
 
@@ -1007,8 +639,8 @@ exports['e2e record api interaction errors update instance 500 does not proceed 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: nightly, Group: foo, Parallel: true                                           │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1016,8 +648,8 @@ exports['e2e record api interaction errors update instance 500 does not proceed 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 5 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1038,55 +670,55 @@ exports['e2e record api interaction errors update instance 500 does not proceed 
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    5 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-We encountered an unexpected error talking to our servers.
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
 
 Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
 
 The --group flag you passed was: foo
 The --ciBuildId flag you passed was: ciBuildId123
 
-The server's response was:
-
-StatusCodeError: 500 - "Internal Server Error"
-
 `
 
 exports['e2e record api interaction errors api retries on error warns and does not create or update instances 1'] = `
-We encountered an unexpected error talking to our servers.
-
-We will retry 3 more times in 1 second...
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 500 - "Internal Server Error"
-We encountered an unexpected error talking to our servers.
 
-We will retry 2 more times in 2 seconds...
+We will retry 3 more times in X second(s)...
 
-The server's response was:
-
-StatusCodeError: 500 - "Internal Server Error"
-We encountered an unexpected error talking to our servers.
-
-We will retry 1 more time in 3 seconds...
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 500 - "Internal Server Error"
+
+We will retry 2 more times in X second(s)...
+
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
+
+We will retry 1 more time in X second(s)...
+
 
 ====================================================================================================
 
@@ -1095,24 +727,23 @@ StatusCodeError: 500 - "Internal Server Error"
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: nightly, Group: foo, Parallel: true                                           │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-We encountered an unexpected error talking to our servers.
-
-We will retry 3 more times in 1 second...
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 500 - "Internal Server Error"
 
+We will retry 3 more times in X second(s)...
+
+
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 5 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1133,21 +764,26 @@ StatusCodeError: 500 - "Internal Server Error"
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    5 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -1156,14 +792,14 @@ StatusCodeError: 500 - "Internal Server Error"
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -1171,11 +807,11 @@ StatusCodeError: 500 - "Internal Server Error"
 exports['e2e record recordKey warns but does not exit when is forked pr and parallel 1'] = `
 Warning: It looks like you are trying to record this run from a forked PR.
 
-The 'Record Key' is missing. Your CI provider is likely not passing private environment variables to builds from forks.
+The Record Key is missing. Your CI provider is likely not passing private environment variables to builds from forks.
 
 These results will not be recorded.
 
-This error will not alter the exit code.
+This error will not affect or change the exit code.
 
 ====================================================================================================
 
@@ -1184,14 +820,14 @@ This error will not alter the exit code.
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
+  Running:  record_pass.cy.js                                                               (1 of 1)
 
 
   record pass
@@ -1212,15 +848,20 @@ This error will not alter the exit code.
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
+
+
+  (Video)
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
 
 
 ====================================================================================================
@@ -1230,7 +871,7 @@ This error will not alter the exit code.
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
@@ -1256,19 +897,17 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 `
 
 exports['e2e record api interaction errors create run 402 - unknown error errors and exits when there\'s an unknown 402 error 1'] = `
-We encountered an unexpected error talking to our servers.
-
-There is likely something wrong with the request.
-
-The --tag flag you passed was: 
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 402
 
 {
   "error": "Something went wrong"
 }
+
+There is likely something wrong with the request.
+
+The --tag flag you passed was: 
 
 `
 
@@ -1304,8 +943,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1313,8 +952,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1335,21 +974,26 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -1358,14 +1002,14 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -1384,8 +1028,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1393,8 +1037,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1415,21 +1059,26 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -1438,22 +1087,23 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
 
 exports['e2e record api interaction warnings create run warnings unknown warning warns with unknown warning code 1'] = `
-Warning from Cypress Dashboard: You are almost out of time
+Warning from Cypress Cloud: You are almost out of time
 
 Details:
+
 {
   "code": "OUT_OF_TIME",
   "name": "OutOfTime",
@@ -1468,8 +1118,8 @@ Details:
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1477,8 +1127,8 @@ Details:
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1499,21 +1149,26 @@ Details:
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -1522,278 +1177,278 @@ Details:
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
 
 exports['e2e record passing passes 2'] = [
   {
-    "stats": {
-      "suites": 1,
-      "tests": 2,
-      "passes": 0,
-      "pending": 0,
-      "skipped": 1,
-      "failures": 1,
-      "wallClockStartedAt": "2018-02-01T20:14:19.323Z",
-      "wallClockEndedAt": "2018-02-01T20:14:19.323Z",
-      "wallClockDuration": 1234
+    'stats': {
+      'suites': 1,
+      'tests': 2,
+      'passes': 0,
+      'pending': 0,
+      'skipped': 1,
+      'failures': 1,
+      'wallClockStartedAt': '2018-02-01T20:14:19.323Z',
+      'wallClockEndedAt': '2018-02-01T20:14:19.323Z',
+      'wallClockDuration': 1234,
     },
-    "tests": [
+    'tests': [
       {
-        "clientId": "r3",
-        "state": "failed",
-        "displayError": "Error: foo\n\nBecause this error occurred during a `before each` hook we are skipping the remaining tests in the current suite: `record fails`\n      [stack trace lines]",
-        "attempts": [
+        'clientId': 'r3',
+        'state': 'failed',
+        'displayError': 'Error: foo\n\nBecause this error occurred during a `before each` hook we are skipping the remaining tests in the current suite: `record fails`\n      [stack trace lines]',
+        'attempts': [
           {
-            "state": "failed",
-            "error": {
-              "name": "Error",
-              "message": "foo\n\nBecause this error occurred during a `before each` hook we are skipping the remaining tests in the current suite: `record fails`",
-              "stack": "[stack trace lines]",
-              "codeFrame": {
-                "line": 3,
-                "column": 11,
-                "originalFile": "cypress/integration/record_fail_spec.js",
-                "relativeFile": "cypress/integration/record_fail_spec.js",
-                "absoluteFile": "/foo/bar/.projects/e2e/cypress/integration/record_fail_spec.js",
-                "frame": "  1 | describe('record fails', () => {\n  2 |   beforeEach(() => {\n> 3 |     throw new Error('foo')\n    |           ^\n  4 |   })\n  5 | \n  6 |   it('fails 1', () => {})",
-                "language": "js"
-              }
+            'state': 'failed',
+            'error': {
+              'name': 'Error',
+              'message': 'foo\n\nBecause this error occurred during a `before each` hook we are skipping the remaining tests in the current suite: `record fails`',
+              'stack': '[stack trace lines]',
+              'codeFrame': {
+                'line': 3,
+                'column': 11,
+                'originalFile': 'cypress/e2e/record_fail.cy.js',
+                'relativeFile': 'cypress/e2e/record_fail.cy.js',
+                'absoluteFile': '/foo/bar/.projects/e2e/cypress/e2e/record_fail.cy.js',
+                'frame': '  1 | describe(\'record fails\', () => {\n  2 |   beforeEach(() => {\n> 3 |     throw new Error(\'foo\')\n    |           ^\n  4 |   })\n  5 | \n  6 |   it(\'fails 1\', () => {})',
+                'language': 'js',
+              },
             },
-            "timings": {
-              "lifecycle": 100,
-              "before each": [
+            'timings': {
+              'lifecycle': 100,
+              'before each': [
                 {
-                  "hookId": "h1",
-                  "fnDuration": 400,
-                  "afterFnDuration": 200
-                }
-              ]
+                  'hookId': 'h1',
+                  'fnDuration': 400,
+                  'afterFnDuration': 200,
+                },
+              ],
             },
-            "failedFromHookId": "h1",
-            "wallClockStartedAt": "2018-02-01T20:14:19.323Z",
-            "wallClockDuration": 1234,
-            "videoTimestamp": 9999
-          }
-        ]
+            'failedFromHookId': 'h1',
+            'wallClockStartedAt': '2018-02-01T20:14:19.323Z',
+            'wallClockDuration': 1234,
+            'videoTimestamp': 9999,
+          },
+        ],
       },
       {
-        "clientId": "r4",
-        "state": "skipped",
-        "displayError": null,
-        "attempts": [
+        'clientId': 'r4',
+        'state': 'skipped',
+        'displayError': null,
+        'attempts': [
           {
-            "state": "skipped",
-            "error": null,
-            "timings": null,
-            "failedFromHookId": null,
-            "wallClockStartedAt": null,
-            "wallClockDuration": null,
-            "videoTimestamp": null
-          }
-        ]
-      }
+            'state': 'skipped',
+            'error': null,
+            'timings': null,
+            'failedFromHookId': null,
+            'wallClockStartedAt': null,
+            'wallClockDuration': null,
+            'videoTimestamp': null,
+          },
+        ],
+      },
     ],
-    "exception": null,
-    "video": true,
-    "screenshots": [
+    'exception': null,
+    'video': true,
+    'screenshots': [
       {
-        "screenshotId": "some-random-id",
-        "name": null,
-        "testId": "r3",
-        "testAttemptIndex": 0,
-        "takenAt": "2018-02-01T20:14:19.323Z",
-        "height": 720,
-        "width": 1280
-      }
+        'screenshotId': 'some-random-id',
+        'name': null,
+        'testId': 'r3',
+        'testAttemptIndex': 0,
+        'takenAt': '2018-02-01T20:14:19.323Z',
+        'height': 720,
+        'width': 1280,
+      },
     ],
-    "reporterStats": {
-      "suites": 1,
-      "tests": 1,
-      "passes": 0,
-      "pending": 0,
-      "failures": 1,
-      "start": "2018-02-01T20:14:19.323Z",
-      "end": "2018-02-01T20:14:19.323Z",
-      "duration": 1234
+    'reporterStats': {
+      'suites': 1,
+      'tests': 1,
+      'passes': 0,
+      'pending': 0,
+      'failures': 1,
+      'start': '2018-02-01T20:14:19.323Z',
+      'end': '2018-02-01T20:14:19.323Z',
+      'duration': 1234,
     },
-    "metadata": {
-      "studioCreated": 0,
-      "studioExtended": 0
-    }
+    'metadata': {
+      'studioCreated': 0,
+      'studioExtended': 0,
+    },
   },
   {
-    "stats": {
-      "suites": 1,
-      "tests": 2,
-      "passes": 1,
-      "pending": 1,
-      "skipped": 0,
-      "failures": 0,
-      "wallClockStartedAt": "2018-02-01T20:14:19.323Z",
-      "wallClockEndedAt": "2018-02-01T20:14:19.323Z",
-      "wallClockDuration": 1234
+    'stats': {
+      'suites': 1,
+      'tests': 2,
+      'passes': 1,
+      'pending': 1,
+      'skipped': 0,
+      'failures': 0,
+      'wallClockStartedAt': '2018-02-01T20:14:19.323Z',
+      'wallClockEndedAt': '2018-02-01T20:14:19.323Z',
+      'wallClockDuration': 1234,
     },
-    "tests": [
+    'tests': [
       {
-        "clientId": "r3",
-        "state": "passed",
-        "displayError": null,
-        "attempts": [
+        'clientId': 'r3',
+        'state': 'passed',
+        'displayError': null,
+        'attempts': [
           {
-            "state": "passed",
-            "error": null,
-            "timings": {
-              "lifecycle": 100,
-              "test": {
-                "fnDuration": 400,
-                "afterFnDuration": 200
-              }
+            'state': 'passed',
+            'error': null,
+            'timings': {
+              'lifecycle': 100,
+              'test': {
+                'fnDuration': 400,
+                'afterFnDuration': 200,
+              },
             },
-            "failedFromHookId": null,
-            "wallClockStartedAt": "2018-02-01T20:14:19.323Z",
-            "wallClockDuration": 1234,
-            "videoTimestamp": 9999
-          }
-        ]
+            'failedFromHookId': null,
+            'wallClockStartedAt': '2018-02-01T20:14:19.323Z',
+            'wallClockDuration': 1234,
+            'videoTimestamp': 9999,
+          },
+        ],
       },
       {
-        "clientId": "r4",
-        "state": "pending",
-        "displayError": null,
-        "attempts": [
+        'clientId': 'r4',
+        'state': 'pending',
+        'displayError': null,
+        'attempts': [
           {
-            "state": "pending",
-            "error": null,
-            "timings": null,
-            "failedFromHookId": null,
-            "wallClockStartedAt": null,
-            "wallClockDuration": null,
-            "videoTimestamp": null
-          }
-        ]
-      }
+            'state': 'pending',
+            'error': null,
+            'timings': null,
+            'failedFromHookId': null,
+            'wallClockStartedAt': null,
+            'wallClockDuration': null,
+            'videoTimestamp': null,
+          },
+        ],
+      },
     ],
-    "exception": null,
-    "video": true,
-    "screenshots": [
+    'exception': null,
+    'video': false,
+    'screenshots': [
       {
-        "screenshotId": "some-random-id",
-        "name": "yay it passes",
-        "testId": "r3",
-        "testAttemptIndex": 0,
-        "takenAt": "2018-02-01T20:14:19.323Z",
-        "height": 1022,
-        "width": 400
-      }
+        'screenshotId': 'some-random-id',
+        'name': 'yay it passes',
+        'testId': 'r3',
+        'testAttemptIndex': 0,
+        'takenAt': '2018-02-01T20:14:19.323Z',
+        'height': 1022,
+        'width': 400,
+      },
     ],
-    "reporterStats": {
-      "suites": 1,
-      "tests": 2,
-      "passes": 1,
-      "pending": 1,
-      "failures": 0,
-      "start": "2018-02-01T20:14:19.323Z",
-      "end": "2018-02-01T20:14:19.323Z",
-      "duration": 1234
+    'reporterStats': {
+      'suites': 1,
+      'tests': 2,
+      'passes': 1,
+      'pending': 1,
+      'failures': 0,
+      'start': '2018-02-01T20:14:19.323Z',
+      'end': '2018-02-01T20:14:19.323Z',
+      'duration': 1234,
     },
-    "metadata": {
-      "studioCreated": 0,
-      "studioExtended": 0
-    }
+    'metadata': {
+      'studioCreated': 0,
+      'studioExtended': 0,
+    },
   },
   {
-    "stats": {
-      "suites": 0,
-      "tests": 1,
-      "passes": 0,
-      "pending": 0,
-      "skipped": 0,
-      "failures": 1,
-      "wallClockStartedAt": "2018-02-01T20:14:19.323Z",
-      "wallClockEndedAt": "2018-02-01T20:14:19.323Z",
-      "wallClockDuration": 1234
+    'stats': {
+      'suites': 0,
+      'tests': 1,
+      'passes': 0,
+      'pending': 0,
+      'skipped': 0,
+      'failures': 1,
+      'wallClockStartedAt': '2018-02-01T20:14:19.323Z',
+      'wallClockEndedAt': '2018-02-01T20:14:19.323Z',
+      'wallClockDuration': 1234,
     },
-    "tests": [
+    'tests': [
       {
-        "clientId": "r2",
-        "state": "failed",
-        "displayError": "Error: The following error originated from your test code, not from Cypress.\n\n  > instantly fails\n\nWhen Cypress detects uncaught errors originating from your test code it will automatically fail the current test.\n\nCypress could not associate this error to any specific test.\n\nWe dynamically generated a new test to display this failure.\n      [stack trace lines]",
-        "attempts": [
+        'clientId': 'r2',
+        'state': 'failed',
+        'displayError': 'Error: The following error originated from your test code, not from Cypress.\n\n  > instantly fails\n\nWhen Cypress detects uncaught errors originating from your test code it will automatically fail the current test.\n\nCypress could not associate this error to any specific test.\n\nWe dynamically generated a new test to display this failure.\n      [stack trace lines]',
+        'attempts': [
           {
-            "state": "failed",
-            "error": {
-              "name": "Error",
-              "message": "The following error originated from your test code, not from Cypress.\n\n  > instantly fails\n\nWhen Cypress detects uncaught errors originating from your test code it will automatically fail the current test.\n\nCypress could not associate this error to any specific test.\n\nWe dynamically generated a new test to display this failure.",
-              "stack": "[stack trace lines]",
-              "codeFrame": {
-                "line": 1,
-                "column": 7,
-                "originalFile": "cypress/integration/record_uncaught_spec.js",
-                "relativeFile": "cypress/integration/record_uncaught_spec.js",
-                "absoluteFile": "/foo/bar/.projects/e2e/cypress/integration/record_uncaught_spec.js",
-                "frame": "> 1 | throw new Error('instantly fails')\n    |       ^\n  2 | ",
-                "language": "js"
-              }
+            'state': 'failed',
+            'error': {
+              'name': 'Error',
+              'message': 'The following error originated from your test code, not from Cypress.\n\n  > instantly fails\n\nWhen Cypress detects uncaught errors originating from your test code it will automatically fail the current test.\n\nCypress could not associate this error to any specific test.\n\nWe dynamically generated a new test to display this failure.',
+              'stack': '[stack trace lines]',
+              'codeFrame': {
+                'line': 1,
+                'column': 7,
+                'originalFile': 'cypress/e2e/record_uncaught.cy.js',
+                'relativeFile': 'cypress/e2e/record_uncaught.cy.js',
+                'absoluteFile': '/foo/bar/.projects/e2e/cypress/e2e/record_uncaught.cy.js',
+                'frame': '> 1 | throw new Error(\'instantly fails\')\n    |       ^\n  2 | ',
+                'language': 'js',
+              },
             },
-            "timings": {
-              "lifecycle": 100,
-              "test": {
-                "fnDuration": 400,
-                "afterFnDuration": 200
-              }
+            'timings': {
+              'lifecycle': 100,
+              'test': {
+                'fnDuration': 400,
+                'afterFnDuration': 200,
+              },
             },
-            "failedFromHookId": null,
-            "wallClockStartedAt": "2018-02-01T20:14:19.323Z",
-            "wallClockDuration": 1234,
-            "videoTimestamp": 9999
-          }
-        ]
-      }
+            'failedFromHookId': null,
+            'wallClockStartedAt': '2018-02-01T20:14:19.323Z',
+            'wallClockDuration': 1234,
+            'videoTimestamp': 9999,
+          },
+        ],
+      },
     ],
-    "exception": null,
-    "video": true,
-    "screenshots": [
+    'exception': null,
+    'video': true,
+    'screenshots': [
       {
-        "screenshotId": "some-random-id",
-        "name": null,
-        "testId": "r2",
-        "testAttemptIndex": 0,
-        "takenAt": "2018-02-01T20:14:19.323Z",
-        "height": 720,
-        "width": 1280
-      }
+        'screenshotId': 'some-random-id',
+        'name': null,
+        'testId': 'r2',
+        'testAttemptIndex': 0,
+        'takenAt': '2018-02-01T20:14:19.323Z',
+        'height': 720,
+        'width': 1280,
+      },
     ],
-    "reporterStats": {
-      "suites": 0,
-      "tests": 1,
-      "passes": 0,
-      "pending": 0,
-      "failures": 1,
-      "start": "2018-02-01T20:14:19.323Z",
-      "end": "2018-02-01T20:14:19.323Z",
-      "duration": 1234
+    'reporterStats': {
+      'suites': 0,
+      'tests': 1,
+      'passes': 0,
+      'pending': 0,
+      'failures': 1,
+      'start': '2018-02-01T20:14:19.323Z',
+      'end': '2018-02-01T20:14:19.323Z',
+      'duration': 1234,
     },
-    "metadata": {
-      "studioCreated": 0,
-      "studioExtended": 0
-    }
-  }
+    'metadata': {
+      'studioCreated': 0,
+      'studioExtended': 0,
+    },
+  },
 ]
 
 exports['e2e record api interaction warnings create run warnings grace period - over private tests limit warns when over private test results 1'] = `
 You've exceeded the limit of private test results under your free plan this month. The limit is 500 private test results.
 
-Your plan is now in a grace period, which means your tests will still be recorded until 2999-12-31. Please upgrade your plan to continue recording tests on the Cypress Dashboard in the future.
+Your plan is now in a grace period, which means your tests will still be recorded until 2999-12-31. Please upgrade your plan to continue recording tests on Cypress Cloud in the future.
 
 https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
@@ -1804,8 +1459,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1813,8 +1468,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1835,21 +1490,26 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -1858,14 +1518,14 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -1886,8 +1546,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1895,8 +1555,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1917,21 +1577,26 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -1940,14 +1605,14 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -1966,8 +1631,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -1975,8 +1640,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -1997,21 +1662,26 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -2020,14 +1690,14 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -2046,8 +1716,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2055,8 +1725,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -2077,21 +1747,26 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -2100,14 +1775,14 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -2126,8 +1801,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2135,8 +1810,8 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -2157,21 +1832,26 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass_spec.js/yay it passes.png
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
 
 ====================================================================================================
 
@@ -2180,36 +1860,32 @@ https://on.cypress.io/dashboard/organizations/org-id-1234/billing
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  record_pass_spec.js                      XX:XX        2        1        -        1        - │
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        2        1        -        1        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
 
 exports['e2e record api interaction errors create run 500 errors and exits 1'] = `
-We encountered an unexpected error talking to our servers.
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 500 - "Internal Server Error"
 
 `
 
 exports['e2e record api interaction errors create run 500 when grouping without parallelization errors and exits 1'] = `
-We encountered an unexpected error talking to our servers.
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
 
 The --group flag you passed was: foo
 The --ciBuildId flag you passed was: ciBuildId123
-
-The server's response was:
-
-StatusCodeError: 500 - "Internal Server Error"
 
 `
 
@@ -2222,15 +1898,13 @@ exports['e2e record api interaction errors create instance 500 without paralleli
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      2 found (a_record.spec.js, b_record.spec.js)                                       │
-  │ Searched:   cypress/integration/*_record.spec.js                                               │
+  │ Specs:      2 found (a_record.cy.js, b_record.cy.js)                                           │
+  │ Searched:   cypress/e2e/a_record.cy.js, cypress/e2e/b_record.cy.js                             │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-We encountered an unexpected error talking to our servers.
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 500 - "Internal Server Error"
 
@@ -2245,15 +1919,13 @@ exports['e2e record api interaction errors create instance errors and exits on c
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      2 found (a_record_instantfail.spec.js, config_record_spec.js)                      │
-  │ Searched:   cypress/integration/*_record_*                                                     │
+  │ Specs:      1 found (a_record_instantfail.cy.js)                                               │
+  │ Searched:   cypress/e2e/a_record_instantfail.cy.js                                             │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-We encountered an unexpected error talking to our servers.
-
-The server's response was:
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 500 - "Internal Server Error"
 
@@ -2268,8 +1940,8 @@ exports['e2e record api interaction errors postInstanceTests without paralleliza
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      2 found (a_record.spec.js, b_record.spec.js)                                       │
-  │ Searched:   cypress/integration/*_record.spec*                                                 │
+  │ Specs:      2 found (a_record.cy.js, b_record.cy.js)                                           │
+  │ Searched:   cypress/e2e/a_record.cy.js, cypress/e2e/b_record.cy.js                             │
   │ Params:     Tag: false, Group: foo, Parallel: false                                            │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2277,16 +1949,14 @@ exports['e2e record api interaction errors postInstanceTests without paralleliza
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  a_record.spec.js                                                                (1 of 2)
-  Estimated: 8 seconds
-We encountered an unexpected error talking to our servers.
+  Running:  a_record.cy.js                                                                  (1 of 2)
+  Estimated: X second(s)
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
 
 The --group flag you passed was: foo
 The --ciBuildId flag you passed was: 1
-
-The server's response was:
-
-StatusCodeError: 500 - "Internal Server Error"
 
 `
 
@@ -2299,8 +1969,8 @@ exports['e2e record api interaction errors postInstanceTests with parallelizatio
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      2 found (a_record.spec.js, b_record.spec.js)                                       │
-  │ Searched:   cypress/integration/*_record.spec.js                                               │
+  │ Specs:      2 found (a_record.cy.js, b_record.cy.js)                                           │
+  │ Searched:   cypress/e2e/a_record.cy.js, cypress/e2e/b_record.cy.js                             │
   │ Params:     Tag: false, Group: foo, Parallel: true                                             │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2308,18 +1978,16 @@ exports['e2e record api interaction errors postInstanceTests with parallelizatio
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  a_record.spec.js                                                                (1 of 2)
-  Estimated: 8 seconds
-We encountered an unexpected error talking to our servers.
+  Running:  a_record.cy.js                                                                  (1 of 2)
+  Estimated: X second(s)
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
 
 Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
 
 The --group flag you passed was: foo
 The --ciBuildId flag you passed was: ciBuildId123
-
-The server's response was:
-
-StatusCodeError: 500 - "Internal Server Error"
 
 `
 
@@ -2332,8 +2000,8 @@ exports['e2e record api interaction errors postInstanceResults errors and exits 
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (record_pass_spec.js)                                                      │
-  │ Searched:   cypress/integration/record_pass*                                                   │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2341,8 +2009,8 @@ exports['e2e record api interaction errors postInstanceResults errors and exits 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  record_pass_spec.js                                                             (1 of 1)
-  Estimated: 8 seconds
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
 
 
   record pass
@@ -2363,23 +2031,26 @@ exports['e2e record api interaction errors postInstanceResults errors and exits 
   │ Pending:      1                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  1                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     record_pass_spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/record_pass_spec.js/yay it passes.png               (400x1022)
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
 
 
-  (Uploading Results)
+  (Video)
 
-We encountered an unexpected error talking to our servers.
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
 
-The server's response was:
+
+  (Uploading Screenshots & Videos)
+
+We encountered an unexpected error communicating with our servers.
 
 StatusCodeError: 500 - "Internal Server Error"
 
@@ -2394,9 +2065,8 @@ exports['e2e record api skips specs records tests and exits without executing 1'
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      2 found (a_record_instantfail.spec.js, b_record.spec.js)                           │
-  │ Searched:   cypress/integration/a_record_instantfail.spec.js, cypress/integration/b_record.spe │
-  │             c.js                                                                               │
+  │ Specs:      2 found (a_record_instantfail.cy.js, b_record.cy.js)                               │
+  │ Searched:   cypress/e2e/a_record_instantfail.cy.js, cypress/e2e/b_record.cy.js                 │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2404,15 +2074,15 @@ exports['e2e record api skips specs records tests and exits without executing 1'
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  a_record_instantfail.spec.js                                                    (1 of 2)
-  Estimated: 8 seconds
+  Running:  a_record_instantfail.cy.js                                                      (1 of 2)
+  Estimated: X second(s)
 
   This spec and its tests were skipped because the run has been canceled.
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  b_record.spec.js                                                                (2 of 2)
-  Estimated: 8 seconds
+  Running:  b_record.cy.js                                                                  (2 of 2)
+  Estimated: X second(s)
 
 
   b spec
@@ -2433,12 +2103,12 @@ exports['e2e record api skips specs records tests and exits without executing 1'
   │ Screenshots:  0                                                                                │
   │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     b_record.spec.js                                                                 │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     b_record.cy.js                                                                   │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
-  (Uploading Results)
+  (Uploading Screenshots & Videos)
 
   - Nothing to Upload
 
@@ -2449,16 +2119,16 @@ exports['e2e record api skips specs records tests and exits without executing 1'
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ -  a_record_instantfail.spec.js           SKIPPED        -        -        -        -        - │
+  │ -  a_record_instantfail.cy.js             SKIPPED        -        -        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✔  b_record.spec.js                         XX:XX        1        1        -        -        - │
+  │ ✔  b_record.cy.js                           XX:XX        1        1        -        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     -  The run was canceled                     XX:XX        1        1        -        -        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
   Exiting with non-zero exit code because the run was canceled.
@@ -2474,9 +2144,8 @@ exports['e2e record api skips specs records tests and exits without executing in
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      2 found (a_record_instantfail.spec.js, b_record.spec.js)                           │
-  │ Searched:   cypress/integration/a_record_instantfail.spec.js, cypress/integration/b_record.spe │
-  │             c.js                                                                               │
+  │ Specs:      2 found (a_record_instantfail.cy.js, b_record.cy.js)                               │
+  │ Searched:   cypress/e2e/a_record_instantfail.cy.js, cypress/e2e/b_record.cy.js                 │
   │ Params:     Tag: false, Group: abc, Parallel: true                                             │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2484,15 +2153,15 @@ exports['e2e record api skips specs records tests and exits without executing in
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  a_record_instantfail.spec.js                                                    (1 of 2)
-  Estimated: 8 seconds
+  Running:  a_record_instantfail.cy.js                                                      (1 of 2)
+  Estimated: X second(s)
 
   This spec and its tests were skipped because the run has been canceled.
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  b_record.spec.js                                                                (2 of 2)
-  Estimated: 8 seconds
+  Running:  b_record.cy.js                                                                  (2 of 2)
+  Estimated: X second(s)
 
 
   b spec
@@ -2513,12 +2182,12 @@ exports['e2e record api skips specs records tests and exits without executing in
   │ Screenshots:  0                                                                                │
   │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     b_record.spec.js                                                                 │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     b_record.cy.js                                                                   │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
-  (Uploading Results)
+  (Uploading Screenshots & Videos)
 
   - Nothing to Upload
 
@@ -2529,16 +2198,16 @@ exports['e2e record api skips specs records tests and exits without executing in
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ -  a_record_instantfail.spec.js           SKIPPED        -        -        -        -        - │
+  │ -  a_record_instantfail.cy.js             SKIPPED        -        -        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✔  b_record.spec.js                         XX:XX        1        1        -        -        - │
+  │ ✔  b_record.cy.js                           XX:XX        1        1        -        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     -  The run was canceled                     XX:XX        1        1        -        -        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
   Exiting with non-zero exit code because the run was canceled.
@@ -2554,8 +2223,8 @@ exports['e2e record empty specs succeeds when empty spec file 1'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      2 found (empty_suite.spec.js, empty.spec.js)                                       │
-  │ Searched:   cypress/integration/empty_suite.spec.js, cypress/integration/empty.spec.js         │
+  │ Specs:      2 found (empty_suite.cy.js, empty.cy.js)                                           │
+  │ Searched:   cypress/e2e/empty_suite.cy.js, cypress/e2e/empty.cy.js                             │
   │ Params:     Tag: false, Group: false, Parallel: false                                          │
   │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -2563,8 +2232,8 @@ exports['e2e record empty specs succeeds when empty spec file 1'] = `
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  empty_suite.spec.js                                                             (1 of 2)
-  Estimated: 8 seconds
+  Running:  empty_suite.cy.js                                                               (1 of 2)
+  Estimated: X second(s)
 
 
   0 passing
@@ -2579,21 +2248,26 @@ exports['e2e record empty specs succeeds when empty spec file 1'] = `
   │ Pending:      0                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  0                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     empty_suite.spec.js                                                              │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     empty_suite.cy.js                                                                │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
-  (Uploading Results)
+  (Video)
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/empty_suite.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
 
   - Nothing to Upload
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  empty.spec.js                                                                   (2 of 2)
-  Estimated: 8 seconds
+  Running:  empty.cy.js                                                                     (2 of 2)
+  Estimated: X second(s)
 
 
   0 passing
@@ -2608,14 +2282,19 @@ exports['e2e record empty specs succeeds when empty spec file 1'] = `
   │ Pending:      0                                                                                │
   │ Skipped:      0                                                                                │
   │ Screenshots:  0                                                                                │
-  │ Video:        true                                                                             │
+  │ Video:        false                                                                            │
   │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     empty.spec.js                                                                    │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     empty.cy.js                                                                      │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
-  (Uploading Results)
+  (Video)
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/empty.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
 
   - Nothing to Upload
 
@@ -2626,108 +2305,16 @@ exports['e2e record empty specs succeeds when empty spec file 1'] = `
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  empty_suite.spec.js                      XX:XX        -        -        -        -        - │
+  │ ✔  empty_suite.cy.js                        XX:XX        -        -        -        -        - │
   ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ ✔  empty.spec.js                            XX:XX        -        -        -        -        - │
+  │ ✔  empty.cy.js                              XX:XX        -        -        -        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✔  All specs passed!                        XX:XX        -        -        -        -        -  
 
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                        
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
-
-
-`
-
-exports['e2e record misconfiguration errors and exits when no browser found 1'] = `
-Can't run because you've entered an invalid browser name.
-
-Browser: 'browserDoesNotExist' was not found on your system or is not supported by Cypress.
-
-Cypress supports the following browsers:
-- chrome
-- chromium
-- edge
-- electron
-- firefox
-
-You can also use a custom browser: https://on.cypress.io/customize-browsers
-
-Available browsers found on your system are:
-- browser1
-- browser2
-- browser3
-`
-
-exports['e2e record metadata sends Studio usage metadata 1'] = `
-
-====================================================================================================
-
-  (Run Starting)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Cypress:    1.2.3                                                                              │
-  │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (studio_written.spec.js)                                                   │
-  │ Searched:   cypress/integration/studio_written.spec.js                                         │
-  │ Params:     Tag: false, Group: false, Parallel: false                                          │
-  │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                    
-  Running:  studio_written.spec.js                                                          (1 of 1)
-  Estimated: 8 seconds
-
-
-  suite
-    ✓ extended test
-    ✓ created test
-    nested suite
-      ✓ extended test
-      ✓ created test
-
-
-  4 passing
-
-
-  (Results)
-
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ Tests:        4                                                                                │
-  │ Passing:      4                                                                                │
-  │ Failing:      0                                                                                │
-  │ Pending:      0                                                                                │
-  │ Skipped:      0                                                                                │
-  │ Screenshots:  0                                                                                │
-  │ Video:        true                                                                             │
-  │ Duration:     X seconds                                                                        │
-  │ Estimated:    8 seconds                                                                        │
-  │ Spec Ran:     studio_written.spec.js                                                           │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-  (Uploading Results)
-
-  - Nothing to Upload
-
-====================================================================================================
-
-  (Run Finished)
-
-
-       Spec                                              Tests  Passing  Failing  Pending  Skipped  
-  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✔  studio_written.spec.js                   XX:XX        4        4        -        -        - │
-  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-    ✔  All specs passed!                        XX:XX        4        4        -        -        -  
-
-
-───────────────────────────────────────────────────────────────────────────────────────────────────────
-                                                                                                       
-  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12                                   
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
 
 
 `
@@ -2743,5 +2330,539 @@ exports['e2e record quiet mode respects quiet mode 1'] = `
   1 passing
   1 pending
 
+
+  (Video)
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+`
+
+exports['e2e record api interaction errors create run 412 errors and exits when request schema is invalid 1'] = `
+Recording this run failed. The request was invalid.
+
+request should follow postRunRequest@2.0.0 schema
+
+Errors:
+
+[
+  "data has additional properties: group, parallel, ciBuildId, tags, testingType, runnerCapabilities",
+  "data.platform is the wrong type"
+]
+
+Request Sent:
+
+{
+  "ci": null,
+  "specs": [
+    "cypress/e2e/record_pass.cy.js"
+  ],
+  "commit": null,
+  "group": null,
+  "platform": null,
+  "parallel": null,
+  "ciBuildId": null,
+  "projectId": "pid123",
+  "recordKey": "f858a2bc-b469-4e48-be67-0876339ee7e1",
+  "specPattern": "cypress/e2e/record_pass*",
+  "tags": [
+    ""
+  ],
+  "testingType": "e2e",
+  "runnerCapabilities": {
+    "dynamicSpecsInSerialMode": true,
+    "skipSpecAction": true
+  }
+}
+
+`
+
+exports['e2e record video recording when videoUploadOnPasses=false does not upload when specs pass 1'] = `
+
+====================================================================================================
+
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:    1.2.3                                                                              │
+  │ Browser:    FooBrowser 88                                                                      │
+  │ Specs:      2 found (record_fail.cy.js, record_pass.cy.js)                                     │
+  │ Searched:   cypress/e2e/record_fail*, cypress/e2e/record_pass*                                 │
+  │ Params:     Tag: false, Group: false, Parallel: false                                          │
+  │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  record_fail.cy.js                                                               (1 of 2)
+  Estimated: X second(s)
+
+
+  record fails
+    1) "before each" hook for "fails 1"
+
+
+  0 passing
+  1 failing
+
+  1) record fails
+       "before each" hook for "fails 1":
+     Error: foo
+
+Because this error occurred during a \`before each\` hook we are skipping the remaining tests in the current suite: \`record fails\`
+      [stack trace lines]
+
+
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        2                                                                                │
+  │ Passing:      0                                                                                │
+  │ Failing:      1                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      1                                                                                │
+  │ Screenshots:  1                                                                                │
+  │ Video:        true                                                                             │
+  │ Duration:     X seconds                                                                        │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_fail.cy.js                                                                │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+  (Screenshots)
+
+  -  /XXX/XXX/XXX/cypress/screenshots/record_fail.cy.js/record fails -- fails 1 -- be     (1280x720)
+     fore each hook (failed).png                                                                    
+
+
+  (Video)
+
+  -  Started compressing: Compressing to 32 CRF                                                     
+  -  Finished compressing: X second(s)                                               
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_fail.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/screenshots/record_fail.cy.js/record fails -- fails 1 -- before each hook (failed).png
+  - Done Uploading (*/2) /foo/bar/.projects/e2e/cypress/videos/record_fail.cy.js.mp4
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  record_pass.cy.js                                                               (2 of 2)
+  Estimated: X second(s)
+
+
+  record pass
+plugin stdout
+    ✓ passes
+    - is pending
+
+
+  1 passing
+  1 pending
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        2                                                                                │
+  │ Passing:      1                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      1                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  1                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     X seconds                                                                        │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+  (Screenshots)
+
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
+
+
+  (Video)
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
+
+====================================================================================================
+
+  (Run Finished)
+
+
+       Spec                                              Tests  Passing  Failing  Pending  Skipped  
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ ✖  record_fail.cy.js                        XX:XX        2        -        1        -        1 │
+  ├────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+    ✖  1 of 2 failed (50%)                      XX:XX        4        1        1        1        1  
+
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                       
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
+
+
+`
+
+exports['e2e record video recording when video=false does not upload when not enabled 1'] = `
+
+====================================================================================================
+
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:    1.2.3                                                                              │
+  │ Browser:    FooBrowser 88                                                                      │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
+  │ Params:     Tag: false, Group: false, Parallel: false                                          │
+  │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
+
+
+  record pass
+plugin stdout
+    ✓ passes
+    - is pending
+
+
+  1 passing
+  1 pending
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        2                                                                                │
+  │ Passing:      1                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      1                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  1                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     X seconds                                                                        │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+  (Screenshots)
+
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
+
+====================================================================================================
+
+  (Run Finished)
+
+
+       Spec                                              Tests  Passing  Failing  Pending  Skipped  
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+    ✔  All specs passed!                        XX:XX        2        1        -        1        -  
+
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                       
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
+
+
+`
+
+exports['e2e record api interaction errors create run 402 - auto cancel not available in plan errors and exits when auto cancel not available in plan 1'] = `
+Auto Cancellation is not included under your current billing plan.
+
+To enable this service, please visit your billing and upgrade to another plan with Auto Cancellation.
+
+https://on.cypress.io/dashboard/organizations/org-id-1234/billing
+
+`
+
+exports['e2e record misconfiguration errors and exits when no browser found 1'] = `
+Can't run because you've entered an invalid browser name.
+
+Browser: browserDoesNotExist was not found on your system or is not supported by Cypress.
+
+Cypress supports the following browsers:
+ - electron
+ - chrome
+ - chromium
+ - chrome:canary
+ - edge
+ - firefox
+
+You can also use a custom browser: https://on.cypress.io/customize-browsers
+
+Available browsers found on your system are:
+- browser1
+- browser2
+- browser3
+`
+
+exports['e2e record api interaction errors sendPreflight [F1] 500 status code errors with empty body fails after retrying 1'] = `
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
+
+We will retry 1 more time in X second(s)...
+
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
+
+Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
+
+The --group flag you passed was: foo
+The --ciBuildId flag you passed was: ciBuildId123
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F2] 404 status code with JSON body fails without retrying 1'] = `
+We could not find a Cypress Cloud project with the projectId: pid123
+
+This projectId came from your cypress-with-project-id.config.js file or an environment variable.
+
+Please log into Cypress Cloud and find your project.
+
+We will list the correct projectId in the 'Settings' tab.
+
+Alternatively, you can create a new project directly from within the Cypress app.
+
+https://on.cypress.io/cloud
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F2] 404 status code with empty body fails without retrying 1'] = `
+We could not find a Cypress Cloud project with the projectId: pid123
+
+This projectId came from your cypress-with-project-id.config.js file or an environment variable.
+
+Please log into Cypress Cloud and find your project.
+
+We will list the correct projectId in the 'Settings' tab.
+
+Alternatively, you can create a new project directly from within the Cypress app.
+
+https://on.cypress.io/cloud
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F3] 201 status code with invalid decryption fails without retrying 1'] = `
+We encountered an unexpected error communicating with our servers.
+
+DecryptionError: JWE Recipients missing or incorrect type
+
+Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
+
+The --group flag you passed was: foo
+The --ciBuildId flag you passed was: ciBuildId123
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F3] 200 status code with empty body fails without retrying 1'] = `
+We encountered an unexpected error communicating with our servers.
+
+DecryptionError: General JWE must be an object
+
+Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
+
+The --group flag you passed was: foo
+The --ciBuildId flag you passed was: ciBuildId123
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F4] 412 status code with valid decryption fails without retrying 1'] = `
+Recording this run failed. The request was invalid.
+
+Recording is not working
+
+Errors:
+
+[
+  "attempted to send invalid data"
+]
+
+Request Sent:
+
+{
+  "projectId": "cy12345"
+}
+
+`
+
+exports['e2e record api interaction errors sendPreflight [W1] warning message renders preflight warning messages prior to run warnings 1'] = `
+Warning from Cypress Cloud: 
+
+----------------------------------------------------------------------
+This feature will not be supported soon, please check with Cypress to learn more: https://on.cypress.io/
+----------------------------------------------------------------------
+
+You've exceeded the limit of private test results under your free plan this month. The limit is 500 private test results.
+
+Your plan is now in a grace period, which means your tests will still be recorded until 2999-12-31. Please upgrade your plan to continue recording tests on Cypress Cloud in the future.
+
+https://on.cypress.io/dashboard/organizations/org-id-1234/billing
+
+====================================================================================================
+
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:    1.2.3                                                                              │
+  │ Browser:    FooBrowser 88                                                                      │
+  │ Specs:      1 found (record_pass.cy.js)                                                        │
+  │ Searched:   cypress/e2e/record_pass*                                                           │
+  │ Params:     Tag: nightly, Group: foo, Parallel: true                                           │
+  │ Run URL:    https://dashboard.cypress.io/projects/cjvoj7/runs/12                               │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  record_pass.cy.js                                                               (1 of 1)
+  Estimated: X second(s)
+
+
+  record pass
+    ✓ passes
+    - is pending
+
+
+  1 passing
+  1 pending
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        2                                                                                │
+  │ Passing:      1                                                                                │
+  │ Failing:      0                                                                                │
+  │ Pending:      1                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  1                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     X seconds                                                                        │
+  │ Estimated:    X second(s)                                                                      │
+  │ Spec Ran:     record_pass.cy.js                                                                │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+  (Screenshots)
+
+  -  /XXX/XXX/XXX/cypress/screenshots/record_pass.cy.js/yay it passes.png                 (400x1022)
+
+
+  (Video)
+
+  -  Video output: /XXX/XXX/XXX/cypress/videos/record_pass.cy.js.mp4
+
+
+  (Uploading Screenshots & Videos)
+
+  - Done Uploading (1/1) /foo/bar/.projects/e2e/cypress/screenshots/record_pass.cy.js/yay it passes.png
+
+====================================================================================================
+
+  (Run Finished)
+
+
+       Spec                                              Tests  Passing  Failing  Pending  Skipped  
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ ✔  record_pass.cy.js                        XX:XX        2        1        -        1        - │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+    ✔  All specs passed!                        XX:XX        2        1        -        1        -  
+
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                       
+  Recorded Run: https://dashboard.cypress.io/projects/cjvoj7/runs/12
+
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F1] socket errors fails after retrying 1'] = `
+We encountered an unexpected error communicating with our servers.
+
+RequestError: Error: socket hang up
+
+We will retry 1 more time in X second(s)...
+
+We encountered an unexpected error communicating with our servers.
+
+RequestError: Error: socket hang up
+
+Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
+
+The --group flag you passed was: foo
+The --ciBuildId flag you passed was: ciBuildId123
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F3] 422 status code with invalid decryption fails without retrying 1'] = `
+We encountered an unexpected error communicating with our servers.
+
+DecryptionError: JWE Recipients missing or incorrect type
+
+Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
+
+The --group flag you passed was: foo
+The --ciBuildId flag you passed was: ciBuildId123
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F1] 500 status code errors with body fails after retrying 1'] = `
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
+
+We will retry 1 more time in X second(s)...
+
+We encountered an unexpected error communicating with our servers.
+
+StatusCodeError: 500 - "Internal Server Error"
+
+Because you passed the --parallel flag, this run cannot proceed because it requires a valid response from our servers.
+
+The --group flag you passed was: foo
+The --ciBuildId flag you passed was: ciBuildId123
+
+`
+
+exports['e2e record api interaction errors sendPreflight [F5] 422 status code with valid decryption on createRun errors and exits when group name is in use 1'] = `
+You passed the --group flag, but this group name has already been used for this run.
+
+The existing run is: https://cloud.cypress.io/runs/12345
+
+The --group flag you passed was: e2e-tests
+
+If you are trying to parallelize this run, then also pass the --parallel flag, else pass a different group name.
+
+https://on.cypress.io/run-group-name-not-unique
 
 `

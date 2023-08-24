@@ -8,7 +8,7 @@ exports['e2e uncaught errors / failing1'] = `
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
   │ Specs:      1 found (uncaught_synchronous_before_tests_parsed.js)                              │
-  │ Searched:   cypress/integration/uncaught_synchronous_before_tests_parsed.js                    │
+  │ Searched:   cypress/e2e/uncaught_synchronous_before_tests_parsed.js                            │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
@@ -60,9 +60,7 @@ We dynamically generated a new test to display this failure.
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/uncaught_synchronous_before_tes     (X second)
-                          ts_parsed.js.mp4                                                          
+  -  Video output: /XXX/XXX/XXX/cypress/videos/uncaught_synchronous_before_tests_parsed.js.mp4
 
 
 ====================================================================================================
@@ -89,14 +87,14 @@ exports['e2e uncaught errors / failing2'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (uncaught_synchronous_during_hook_spec.js)                                 │
-  │ Searched:   cypress/integration/uncaught_synchronous_during_hook_spec.js                       │
+  │ Specs:      1 found (uncaught_synchronous_during_hook.cy.js)                                   │
+  │ Searched:   cypress/e2e/uncaught_synchronous_during_hook.cy.js                                 │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  uncaught_synchronous_during_hook_spec.js                                        (1 of 1)
+  Running:  uncaught_synchronous_during_hook.cy.js                                          (1 of 1)
 
 
   1) An uncaught error was detected outside of a test
@@ -130,21 +128,19 @@ We dynamically generated a new test to display this failure.
   │ Screenshots:  1                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     uncaught_synchronous_during_hook_spec.js                                         │
+  │ Spec Ran:     uncaught_synchronous_during_hook.cy.js                                           │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_synchronous_during_hook_spec.js/An unc     (1280x720)
-     aught error was detected outside of a test (failed).png                                        
+  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_synchronous_during_hook.cy.js/An uncau     (1280x720)
+     ght error was detected outside of a test (failed).png                                          
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/uncaught_synchronous_during_hoo     (X second)
-                          k_spec.js.mp4                                                             
+  -  Video output: /XXX/XXX/XXX/cypress/videos/uncaught_synchronous_during_hook.cy.js.mp4
 
 
 ====================================================================================================
@@ -154,8 +150,8 @@ We dynamically generated a new test to display this failure.
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✖  uncaught_synchronous_during_hook_sp      XX:XX        1        -        1        -        - │
-  │    ec.js                                                                                       │
+  │ ✖  uncaught_synchronous_during_hook.cy      XX:XX        1        -        1        -        - │
+  │    .js                                                                                         │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✖  1 of 1 failed (100%)                     XX:XX        1        -        1        -        -  
 
@@ -171,14 +167,14 @@ exports['e2e uncaught errors / failing3'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (uncaught_during_test_spec.js)                                             │
-  │ Searched:   cypress/integration/uncaught_during_test_spec.js                                   │
+  │ Specs:      1 found (uncaught_during_test.cy.js)                                               │
+  │ Searched:   cypress/e2e/uncaught_during_test.cy.js                                             │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  uncaught_during_test_spec.js                                                    (1 of 1)
+  Running:  uncaught_during_test.cy.js                                                      (1 of 1)
 
 
   foo
@@ -239,25 +235,23 @@ https://on.cypress.io/uncaught-exception-from-application
   │ Screenshots:  3                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     uncaught_during_test_spec.js                                                     │
+  │ Spec Ran:     uncaught_during_test.cy.js                                                       │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_test_spec.js/foo -- fails with      (1280x720)
-     setTimeout (failed).png                                                                        
-  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_test_spec.js/foo -- fails with      (1280x720)
-     setTimeout and done (failed).png                                                               
-  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_test_spec.js/foo -- fails with      (1280x720)
-     async app code error (failed).png                                                              
+  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_test.cy.js/foo -- fails with se     (1280x720)
+     tTimeout (failed).png                                                                          
+  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_test.cy.js/foo -- fails with se     (1280x720)
+     tTimeout and done (failed).png                                                                 
+  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_test.cy.js/foo -- fails with as     (1280x720)
+     ync app code error (failed).png                                                                
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/uncaught_during_test_spec.js.mp     (X second)
-                          4                                                                         
+  -  Video output: /XXX/XXX/XXX/cypress/videos/uncaught_during_test.cy.js.mp4
 
 
 ====================================================================================================
@@ -267,7 +261,7 @@ https://on.cypress.io/uncaught-exception-from-application
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✖  uncaught_during_test_spec.js             XX:XX        6        2        3        1        - │
+  │ ✖  uncaught_during_test.cy.js               XX:XX        6        2        3        1        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✖  1 of 1 failed (100%)                     XX:XX        6        2        3        1        -  
 
@@ -283,14 +277,14 @@ exports['e2e uncaught errors / failing4'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (uncaught_during_hook_spec.js)                                             │
-  │ Searched:   cypress/integration/uncaught_during_hook_spec.js                                   │
+  │ Specs:      1 found (uncaught_during_hook.cy.js)                                               │
+  │ Searched:   cypress/e2e/uncaught_during_hook.cy.js                                             │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  uncaught_during_hook_spec.js                                                    (1 of 1)
+  Running:  uncaught_during_hook.cy.js                                                      (1 of 1)
 
 
   foo
@@ -328,21 +322,19 @@ Because this error occurred during a \`before all\` hook we are skipping the rem
   │ Screenshots:  1                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     uncaught_during_hook_spec.js                                                     │
+  │ Spec Ran:     uncaught_during_hook.cy.js                                                       │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_hook_spec.js/foo -- does not ru     (1280x720)
-     n -- before all hook (failed).png                                                              
+  -  /XXX/XXX/XXX/cypress/screenshots/uncaught_during_hook.cy.js/foo -- does not run      (1280x720)
+     -- before all hook (failed).png                                                                
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/uncaught_during_hook_spec.js.mp     (X second)
-                          4                                                                         
+  -  Video output: /XXX/XXX/XXX/cypress/videos/uncaught_during_hook.cy.js.mp4
 
 
 ====================================================================================================
@@ -352,7 +344,7 @@ Because this error occurred during a \`before all\` hook we are skipping the rem
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✖  uncaught_during_hook_spec.js             XX:XX        2        1        1        -        - │
+  │ ✖  uncaught_during_hook.cy.js               XX:XX        2        1        1        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✖  1 of 1 failed (100%)                     XX:XX        2        1        1        -        -  
 
@@ -368,14 +360,14 @@ exports['e2e uncaught errors / failing5'] = `
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
   │ Cypress:    1.2.3                                                                              │
   │ Browser:    FooBrowser 88                                                                      │
-  │ Specs:      1 found (caught_async_sync_test_spec.js)                                           │
-  │ Searched:   cypress/integration/caught_async_sync_test_spec.js                                 │
+  │ Specs:      1 found (caught_async_sync_test.cy.js)                                             │
+  │ Searched:   cypress/e2e/caught_async_sync_test.cy.js                                           │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
-  Running:  caught_async_sync_test_spec.js                                                  (1 of 1)
+  Running:  caught_async_sync_test.cy.js                                                    (1 of 1)
 
 
   foo
@@ -426,27 +418,25 @@ exports['e2e uncaught errors / failing5'] = `
   │ Screenshots:  4                                                                                │
   │ Video:        true                                                                             │
   │ Duration:     X seconds                                                                        │
-  │ Spec Ran:     caught_async_sync_test_spec.js                                                   │
+  │ Spec Ran:     caught_async_sync_test.cy.js                                                     │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 
   (Screenshots)
 
-  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test_spec.js/foo -- baz fails     (1280x720)
+  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test.cy.js/foo -- baz fails (     (1280x720)
+     failed).png                                                                                    
+  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test.cy.js/foo -- bar fails (     (1280x720)
+     failed).png                                                                                    
+  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test.cy.js/foo -- quux fails      (1280x720)
+     (failed).png                                                                                   
+  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test.cy.js/foo -- quux2 fails     (1280x720)
       (failed).png                                                                                  
-  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test_spec.js/foo -- bar fails     (1280x720)
-      (failed).png                                                                                  
-  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test_spec.js/foo -- quux fail     (1280x720)
-     s (failed).png                                                                                 
-  -  /XXX/XXX/XXX/cypress/screenshots/caught_async_sync_test_spec.js/foo -- quux2 fai     (1280x720)
-     ls (failed).png                                                                                
 
 
   (Video)
 
-  -  Started processing:  Compressing to 32 CRF                                                     
-  -  Finished processing: /XXX/XXX/XXX/cypress/videos/caught_async_sync_test_spec.js.     (X second)
-                          mp4                                                                       
+  -  Video output: /XXX/XXX/XXX/cypress/videos/caught_async_sync_test.cy.js.mp4
 
 
 ====================================================================================================
@@ -456,7 +446,7 @@ exports['e2e uncaught errors / failing5'] = `
 
        Spec                                              Tests  Passing  Failing  Pending  Skipped  
   ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-  │ ✖  caught_async_sync_test_spec.js           XX:XX        8        4        4        -        - │
+  │ ✖  caught_async_sync_test.cy.js             XX:XX        8        4        4        -        - │
   └────────────────────────────────────────────────────────────────────────────────────────────────┘
     ✖  1 of 1 failed (100%)                     XX:XX        8        4        4        -        -  
 

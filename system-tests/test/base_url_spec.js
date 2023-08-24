@@ -9,13 +9,20 @@ const onServer = (app) => {
 describe('e2e baseUrl', () => {
   context('https', () => {
     systemTests.setup({
+      servers: {
+        port: 443,
+        https: true,
+        onServer,
+      },
       settings: {
-        baseUrl: 'https://httpbin.org',
+        e2e: {
+          baseUrl: 'https://localhost/app',
+        },
       },
     })
 
     systemTests.it('passes', {
-      spec: 'base_url_spec.js',
+      spec: 'base_url.cy.js',
       snapshot: true,
     })
   })
@@ -27,12 +34,14 @@ describe('e2e baseUrl', () => {
         onServer,
       },
       settings: {
-        baseUrl: 'http://localhost:9999/app',
+        e2e: {
+          baseUrl: 'http://localhost:9999/app',
+        },
       },
     })
 
     systemTests.it('passes', {
-      spec: 'base_url_spec.js',
+      spec: 'base_url.cy.js',
       snapshot: true,
     })
   })

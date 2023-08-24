@@ -1,34 +1,49 @@
 /* eslint-disable prefer-rest-params */
-/* globals Cypress */
-
-// @ts-nocheck
 import _ from 'lodash'
 import dayjs from 'dayjs'
 import Promise from 'bluebird'
 
-import $Log from './log'
+import { LogUtils } from './log'
 import $utils from './utils'
 import $errUtils from './error_utils'
 import $stackUtils from './stack_utils'
 import { getResolvedTestConfigOverride } from '../cy/testConfigOverrides'
 import debugFn from 'debug'
+import type { Emissions, TestFilter } from '@packages/types'
+import { SKIPPED_DUE_TO_BROWSER_MESSAGE } from './mocha'
 
 const mochaCtxKeysRe = /^(_runnable|test)$/
 const betweenQuotesRe = /\"(.+?)\"/
 
-const HOOKS = 'beforeAll beforeEach afterEach afterAll'.split(' ')
+const HOOKS = ['beforeAll', 'beforeEach', 'afterEach', 'afterAll'] as const
 const TEST_BEFORE_RUN_ASYNC_EVENT = 'runner:test:before:run:async'
 // event fired before hooks and test execution
 const TEST_BEFORE_RUN_EVENT = 'runner:test:before:run'
 const TEST_AFTER_RUN_EVENT = 'runner:test:after:run'
+const TEST_AFTER_RUN_ASYNC_EVENT = 'runner:runnable:after:run:async'
 
-const RUNNABLE_LOGS = 'routes agents commands hooks'.split(' ')
-const RUNNABLE_PROPS = '_testConfig id order title _titlePath root hookName hookId err state failedFromHookId body speed type duration wallClockStartedAt wallClockDuration timings file originalTitle invocationDetails final currentRetry retries _slow'.split(' ')
+const RUNNABLE_LOGS = ['routes', 'agents', 'commands', 'hooks'] as const
+const RUNNABLE_PROPS = [
+  '_testConfig', 'id', 'order', 'title', '_titlePath', 'root', 'hookName', 'hookId', 'err', 'state', 'pending', 'failedFromHookId', 'body', 'speed', 'type', 'duration', 'wallClockStartedAt', 'wallClockDuration', 'timings', 'file', 'originalTitle', 'invocationDetails', 'final', 'currentRetry', 'retries', '_slow',
+] as const
 
 const debug = debugFn('cypress:driver:runner')
 const debugErrors = debugFn('cypress:driver:errors')
 
-const fire = (event, runnable, Cypress) => {
+const RUNNER_EVENTS = [
+  TEST_BEFORE_RUN_ASYNC_EVENT,
+  TEST_BEFORE_RUN_EVENT,
+  TEST_AFTER_RUN_EVENT,
+  TEST_AFTER_RUN_ASYNC_EVENT,
+] as const
+
+export type HandlerType = 'error' | 'unhandledrejection'
+
+const duration = (before: Date, after: Date) => {
+  return Number(before) - Number(after)
+}
+
+const fire = (event: typeof RUNNER_EVENTS[number], runnable, Cypress) => {
   debug('fire: %o', { event })
   if (runnable._fired == null) {
     runnable._fired = {}
@@ -36,7 +51,7 @@ const fire = (event, runnable, Cypress) => {
 
   runnable._fired[event] = true
 
-  // dont fire anything again if we are skipped
+  // don't fire anything again if we are skipped
   if (runnable._ALREADY_RAN) {
     return
   }
@@ -44,7 +59,7 @@ const fire = (event, runnable, Cypress) => {
   return Cypress.action(event, wrap(runnable), runnable)
 }
 
-const fired = (event, runnable) => {
+const fired = (event: typeof RUNNER_EVENTS[number], runnable) => {
   return !!(runnable._fired && runnable._fired[event])
 }
 
@@ -61,7 +76,7 @@ const runnableAfterRunAsync = (runnable, Cypress) => {
 
   return Promise.try(() => {
     // NOTE: other events we do not fire more than once, but this needed to change for test-retries
-    return fire('runner:runnable:after:run:async', runnable, Cypress)
+    return fire(TEST_AFTER_RUN_ASYNC_EVENT, runnable, Cypress)
   })
 }
 
@@ -103,6 +118,8 @@ const testAfterRun = (test, Cypress) => {
     // prevent loop comprehension
     return null
   }
+
+  return null
 }
 
 const setTestTimingsForHook = (test, hookName, obj) => {
@@ -126,18 +143,21 @@ const setTestTimings = (test, name, obj) => {
 }
 
 const setWallClockDuration = (test) => {
-  return test.wallClockDuration = new Date() - test.wallClockStartedAt
+  return test.wallClockDuration = duration(new Date(), test.wallClockStartedAt)
 }
 
 // we need to optimize wrap by converting
 // tests to an id-based object which prevents
 // us from recursively iterating through every
 // parent since we could just return the found test
-const wrap = (runnable) => {
+const wrap = (runnable): Record<string, any> | null => {
   return $utils.reduceProps(runnable, RUNNABLE_PROPS)
 }
 
-const wrapAll = (runnable) => {
+// Reduce runnable down to its props and collections.
+// Sent to the Reporter to populate command log
+// and send to Cypress Cloud when in record mode.
+const wrapAll = (runnable): Record<string, any> => {
   return _.extend(
     {},
     $utils.reduceProps(runnable, RUNNABLE_PROPS),
@@ -201,7 +221,7 @@ const eachHookInSuite = (suite, fn) => {
 
 // iterates over a suite's tests (including nested suites)
 // and will return as soon as the callback is true
-const findTestInSuite = (suite, fn = _.identity) => {
+const findTestInSuite = (suite, fn: any = _.identity) => {
   for (const test of suite.tests) {
     if (fn(test)) {
       return test
@@ -217,7 +237,7 @@ const findTestInSuite = (suite, fn = _.identity) => {
   }
 }
 
-const findSuiteInSuite = (suite, fn = _.identity) => {
+const findSuiteInSuite = (suite, fn: any = _.identity) => {
   if (fn(suite)) {
     return suite
   }
@@ -240,7 +260,7 @@ const suiteHasSuite = (suite, suiteId) => {
 }
 
 // same as findTestInSuite but iterates backwards
-const findLastTestInSuite = (suite, fn = _.identity) => {
+const findLastTestInSuite = (suite, fn: any = _.identity) => {
   for (let i = suite.suites.length - 1; i >= 0; i--) {
     const test = findLastTestInSuite(suite.suites[i], fn)
 
@@ -259,7 +279,7 @@ const findLastTestInSuite = (suite, fn = _.identity) => {
 }
 
 const getAllSiblingTests = (suite, getTestById) => {
-  const tests = []
+  const tests: any[] = []
 
   suite.eachTest((testRunnable) => {
     // iterate through each of our suites tests.
@@ -271,6 +291,8 @@ const getAllSiblingTests = (suite, getTestById) => {
     if (test) {
       return tests.push(test)
     }
+
+    return
   })
 
   return tests
@@ -300,7 +322,7 @@ const isLastSuite = (suite, tests) => {
 
   // grab all of the suites from our filtered tests
   // including all of their ancestor suites!
-  const suites = _.reduce(tests, (memo, test) => {
+  const suites = _.reduce<any, any[]>(tests, (memo, test) => {
     let parent
 
     while ((parent = test.parent)) {
@@ -309,8 +331,7 @@ const isLastSuite = (suite, tests) => {
     }
 
     return memo
-  }
-  , [])
+  }, [])
 
   // intersect them with our parent suites and see if the last one is us
   return _
@@ -357,7 +378,7 @@ const overrideRunnerHook = (Cypress, _runner, getTestById, getTest, setTest, get
     const test = getTest()
     const allTests = getTests()
 
-    let shouldFireTestAfterRun = _.noop
+    let shouldFireTestAfterRun = () => false
 
     switch (name) {
       case 'afterEach':
@@ -375,6 +396,8 @@ const overrideRunnerHook = (Cypress, _runner, getTestById, getTest, setTest, get
               return true
             }
           }
+
+          return false
         }
 
         break
@@ -395,7 +418,7 @@ const overrideRunnerHook = (Cypress, _runner, getTestById, getTest, setTest, get
             // due to already being run on top navigation
             // https://github.com/cypress-io/cypress/issues/9026
             if (!testIsActuallyInSuite) {
-              return
+              return false
             }
 
             // 1. if we're the very last test in the entire allTests
@@ -410,6 +433,8 @@ const overrideRunnerHook = (Cypress, _runner, getTestById, getTest, setTest, get
               return true
             }
           }
+
+          return false
         }
 
         break
@@ -449,9 +474,8 @@ const overrideRunnerHook = (Cypress, _runner, getTestById, getTest, setTest, get
 
 const getTestResults = (tests) => {
   return _.map(tests, (test) => {
-    const obj = _.pick(test, 'id', 'duration', 'state')
+    const obj: Record<string, any> = _.pick(test, 'title', 'id', 'duration', 'state')
 
-    obj.title = test.originalTitle
     // TODO FIX THIS!
     if (!obj.state) {
       obj.state = 'skipped'
@@ -469,7 +493,78 @@ const hasOnly = (suite) => {
   )
 }
 
-const normalizeAll = (suite, initialTests = {}, setTestsById, setTests, onRunnable, onLogsById, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest) => {
+// Removes a suite and any of it's hooks/tests. Also removes the reference to itself so that it can be GC'd
+const pruneSuite = (emptySuite) => {
+  emptySuite.cleanReferences()
+
+  if (emptySuite.parent) {
+    const parentSuites = emptySuite.parent.suites.filter((suite) => suite !== emptySuite)
+
+    emptySuite.parent.suites = parentSuites
+    emptySuite.parent._onlySuites = emptySuite.parent._onlySuites.filter((suite) => parentSuites.includes(suite))
+    emptySuite.parent = null
+  }
+}
+
+// When in open mode and a "testFilter" is active, tests/suites that do not match the test filter
+// need to be removed as they might have modifiers (.only) that would affect the matched set of tests.
+// This function will recursively iterate through all of the suites and filter out any tests that do not
+// match the specified filter. If the suite is empty after removing the tests, the suite is also removed.
+const pruneEmptySuites = (rootSuite, testFilter: NonNullable<TestFilter>) => {
+  // We want to start at the lowest level so recurse first. We want to prune child suites before parents
+
+  let totalUnfilteredTests = 0
+
+  for (const suite of [...rootSuite.suites]) {
+    totalUnfilteredTests += pruneEmptySuites(suite, testFilter)
+  }
+
+  if (!rootSuite.suites.length && !rootSuite.tests.length) {
+    pruneSuite(rootSuite)
+  }
+
+  if (rootSuite.tests.length) {
+    totalUnfilteredTests += rootSuite.tests.length
+
+    const tests: any[] = []
+    const onlyTests: any[] = []
+
+    for (const test of rootSuite.tests) {
+      // Tests/suites of the shape "it('should', { browser: 'chrome' }, ...)" will have their title
+      // updated with a skipped message. Even if the test is skipped we should still show it in the reporter
+      // so we match the "fullTitle" with the skipped message removed.
+      const fullTitle = test.fullTitle().replaceAll(SKIPPED_DUE_TO_BROWSER_MESSAGE, '')
+
+      if (testFilter.includes(fullTitle)) {
+        tests.push(test)
+
+        if (rootSuite._onlyTests.includes(test)) {
+          onlyTests.push(test)
+        }
+      } else {
+        delete test.fn
+      }
+    }
+
+    rootSuite.tests = tests
+    rootSuite._onlyTests = onlyTests
+
+    if (!rootSuite.tests.length && !rootSuite.suites.length) {
+      pruneSuite(rootSuite)
+    }
+  }
+
+  return totalUnfilteredTests
+}
+
+const normalizeAll = (suite, initialTests = {}, testFilter, setTestsById, setTests, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest) => {
+  let totalUnfilteredTests = 0
+
+  // Empty suites don't have any impact in run mode so let's avoid this extra work.
+  if (Cypress.config('isInteractive') && testFilter) {
+    totalUnfilteredTests = pruneEmptySuites(suite, testFilter)
+  }
+
   let hasTests = false
 
   // only loop until we find the first test
@@ -487,8 +582,9 @@ const normalizeAll = (suite, initialTests = {}, setTestsById, setTests, onRunnab
   // we hand back a normalized object but also
   // create optimized lookups for the tests without
   // traversing through it multiple times
-  const tests = {}
-  const normalizedSuite = normalize(suite, tests, initialTests, onRunnable, onLogsById, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest)
+  const tests: Record<string, any> = {}
+
+  const normalizedSuite = normalize(suite, tests, initialTests, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest)
 
   if (setTestsById) {
     // use callback here to hand back
@@ -518,12 +614,17 @@ const normalizeAll = (suite, initialTests = {}, setTestsById, setTests, onRunnab
     }
 
     normalizedSuite.runtimeConfig[key] = v
+
+    return
   })
+
+  normalizedSuite.testFilter = testFilter
+  normalizedSuite.totalUnfilteredTests = totalUnfilteredTests
 
   return normalizedSuite
 }
 
-const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest) => {
+const normalize = (runnable, tests, initialTests, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest) => {
   const normalizeRunnable = (runnable) => {
     if (!runnable.id) {
       runnable.id = getRunnableId()
@@ -532,10 +633,6 @@ const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRun
     // tests have a type of 'test' whereas suites do not have a type property
     if (runnable.type == null) {
       runnable.type = 'suite'
-    }
-
-    if (onRunnable) {
-      onRunnable(runnable)
     }
 
     // if we have a runnable in the initial state
@@ -548,22 +645,8 @@ const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRun
       prevAttempts = []
 
       if (i.prevAttempts) {
-        prevAttempts = _.map(i.prevAttempts, (test) => {
-          if (test) {
-            _.each(RUNNABLE_LOGS, (type) => {
-              return _.each(test[type], onLogsById)
-            })
-          }
-
-          // reduce this runnable down to its props
-          // and collections
-          return wrapAll(test)
-        })
+        prevAttempts = _.map(i.prevAttempts, wrapAll)
       }
-
-      _.each(RUNNABLE_LOGS, (type) => {
-        return _.each(i[type], onLogsById)
-      })
 
       _.extend(runnable, i)
     }
@@ -571,8 +654,6 @@ const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRun
     // merge all hooks into single array
     runnable.hooks = condenseHooks(runnable, getHookId)
 
-    // reduce this runnable down to its props
-    // and collections
     const wrappedRunnable = wrapAll(runnable)
 
     if (runnable.type === 'test') {
@@ -632,7 +713,7 @@ const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRun
     _.each({ tests: runnableTests, suites: runnableSuites }, (_runnables, type) => {
       if (runnable[type]) {
         return normalizedRunnable[type] = _.compact(_.map(_runnables, (childRunnable) => {
-          const normalizedChild = normalize(childRunnable, tests, initialTests, onRunnable, onLogsById, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest)
+          const normalizedChild = normalize(childRunnable, tests, initialTests, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest)
 
           if (type === 'tests' && onlyIdMode()) {
             if (normalizedChild.id === getOnlyTestId()) {
@@ -659,6 +740,8 @@ const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRun
           return normalizedChild
         }))
       }
+
+      return null
     })
 
     return normalizedRunnable
@@ -719,7 +802,7 @@ const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRun
       suite.suites = []
 
       normalizedSuite.suites = _.compact(_.map(suiteSuites, (childSuite) => {
-        const normalizedChildSuite = normalize(childSuite, tests, initialTests, onRunnable, onLogsById, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest)
+        const normalizedChildSuite = normalize(childSuite, tests, initialTests, getRunnableId, getHookId, getOnlyTestId, getOnlySuiteId, createEmptyOnlyTest)
 
         if ((suite._onlySuites.indexOf(childSuite) !== -1) || filterOnly(normalizedChildSuite, childSuite)) {
           if (onlyIdMode()) {
@@ -736,6 +819,8 @@ const normalize = (runnable, tests, initialTests, onRunnable, onLogsById, getRun
 
           return normalizedChildSuite
         }
+
+        return null
       }))
     }
 
@@ -972,16 +1057,23 @@ const _runnerListeners = (_runner, Cypress, _emissions, getTestById, getTest, se
       hookName = getHookName(runnable)
       const test = getTest() || getTestFromHookOrFindTest(runnable)
 
+      const unsupportedPlugin = $errUtils.getUnsupportedPlugin(runnable)
+
       // append a friendly message to the error indicating
       // we're skipping the remaining tests in this suite
-      err = $errUtils.appendErrMsg(
-        err,
-        $errUtils.errByPath('uncaught.error_in_hook', {
-          parentTitle,
-          hookName,
-          retries: test._retries,
-        }).message,
-      )
+      const errMessage = $errUtils.errByPath('uncaught.error_in_hook', {
+        parentTitle,
+        hookName,
+        retries: test._retries,
+        unsupportedPlugin,
+        errMessage: err.message,
+      }).message
+
+      if (unsupportedPlugin) {
+        err = $errUtils.modifyErrMsg(err, errMessage, () => errMessage)
+      } else {
+        err = $errUtils.appendErrMsg(err, errMessage)
+      }
     }
 
     // always set runnable err so we can tap into
@@ -1016,9 +1108,9 @@ export default {
   create: (specWindow, mocha, Cypress, cy, state) => {
     let _runnableId = 0
     let _hookId = 0
-    let _uncaughtFn = null
-    let _resumedAtTestIndex = null
-
+    let _uncaughtFn: (() => never) | null = null
+    let _resumedAtTestIndex: number | null = null
+    let _skipCollectingLogs = true
     const _runner = mocha.getRunner()
 
     _runner.suite = mocha.getRootSuite()
@@ -1051,7 +1143,7 @@ export default {
     }
 
     // eslint-disable-next-line @cypress/dev/arrow-body-multiline-braces
-    const onSpecError = (handlerType) => (event) => {
+    const onSpecError = (handlerType: HandlerType) => (event) => {
       let { originalErr, err } = $errUtils.errorFromUncaughtEvent(handlerType, event)
 
       debugErrors('uncaught spec error: %o', originalErr)
@@ -1094,23 +1186,31 @@ export default {
       return undefined
     }
 
-    specWindow.addEventListener('error', onSpecError('error'))
-    specWindow.addEventListener('unhandledrejection', onSpecError('unhandledrejection'))
+    // Unlike End To End Testing which has two iframes
+    // - Spec Frame, for the spec.
+    // - AUT Frame, for the user's application.
+    // Component Testing only has one iframe. The AUT Frame is also the Spec Frame,
+    // since we serve the specs from a dev server - they are bundled as a single file.
+    // We don't want to bind two error handlers, or we end up logging errors twice.
+    // For this reason, we conditionally add these event listeners here - Component Testing errors are captured and logged
+    // in contentWindowListeners#bindToListeners in cypress/cy.ts.
+    if (Cypress.testingType === 'e2e') {
+      specWindow.addEventListener('error', onSpecError('error'))
+      specWindow.addEventListener('unhandledrejection', onSpecError('unhandledrejection'))
+    }
 
     // hold onto the _runnables for faster lookup later
-    let _test = null
-    let _tests = []
-    let _testsById = {}
-    const _testsQueue = []
-    const _testsQueueById = {}
+    let _test: any = null
+    let _tests: any[] = []
+    let _testsById: Record<string, any> = {}
+    const _testsQueue: any[] = []
+    const _testsQueueById: Record<string, any> = {}
     // only used during normalization
-    const _runnables = []
-    const _logsById = {}
-    let _emissions = {
+    let _emissions: Emissions = {
       started: {},
       ended: {},
     }
-    let _startTime = null
+    let _startTime: string | null = null
     let _onlyTestId = null
     let _onlySuiteId = null
 
@@ -1132,15 +1232,6 @@ export default {
 
     const getTests = () => {
       return _tests
-    }
-
-    const onRunnable = (r) => {
-      // set default retries at onRunnable time instead of onRunnableRun
-      return _runnables.push(r)
-    }
-
-    const onLogsById = (l) => {
-      return _logsById[l.id] = l
     }
 
     const getTest = () => {
@@ -1209,7 +1300,7 @@ export default {
       const r = runnable
       const isHook = r.type === 'hook'
       const isTest = r.type === 'test'
-      const test = getTest() || getTestFromHook(runnable, getTestById)
+      const test = getTest() || getTestFromHook(runnable)
       const hookName = isHook && getHookName(r)
       const isBeforeEachHook = isHook && !!hookName.match(/before each/)
       const isAfterEachHook = isHook && !!hookName.match(/after each/)
@@ -1298,8 +1389,8 @@ export default {
       onSpecError,
       setOnlyTestId,
       setOnlySuiteId,
-
-      normalizeAll (tests) {
+      normalizeAll (tests, skipCollectingLogs, testFilter) {
+        _skipCollectingLogs = skipCollectingLogs
         // if we have an uncaught error then slice out
         // all of the tests and suites and just generate
         // a single test since we received an uncaught
@@ -1318,10 +1409,9 @@ export default {
         return normalizeAll(
           _runner.suite,
           tests,
+          testFilter,
           setTestsById,
           setTests,
-          onRunnable,
-          onLogsById,
           getRunnableId,
           getHookId,
           getOnlyTestId,
@@ -1356,7 +1446,7 @@ export default {
         })
       },
 
-      onRunnableRun (runnableRun, runnable, args) {
+      onRunnableRun (runnableRun, runnable: CypressRunnable, args) {
         // extract out the next(fn) which mocha uses to
         // move to the next runnable - this will be our async seam
         const _next = args[0]
@@ -1382,11 +1472,11 @@ export default {
         // runtime of a runnables fn execution duration
         // and also the run of the runnable:after:run:async event
         let lifecycleStart
-        let wallClockEnd = null
-        let fnDurationStart = null
-        let fnDurationEnd = null
-        let afterFnDurationStart = null
-        let afterFnDurationEnd = null
+        let wallClockEnd: Date | null = null
+        let fnDurationStart: Date | null = null
+        let fnDurationEnd: Date | null = null
+        let afterFnDurationStart: Date | null = null
+        let afterFnDurationEnd: Date | null = null
 
         // when this is a hook, capture the real start
         // date so we can calculate our test's duration
@@ -1404,23 +1494,27 @@ export default {
 
         const isHook = runnable.type === 'hook'
 
+        let runnableName = 'test'
+        let runnableId = runnable.id
+
+        if (isHook) {
         // if this isn't a hook, then the name is 'test'
-        const hookName = isHook ? getHookName(runnable) : 'test'
+          runnableName = getHookName(runnable)
 
-        // set hook id to hook id or test id
-        const hookId = isHook ? runnable.hookId : runnable.id
+          // set hook id to hook id or test id
+          runnableId = runnable.hookId
 
-        const isAfterEachHook = isHook && hookName.match(/after each/)
-        const isBeforeEachHook = isHook && hookName.match(/before each/)
+          const isAfterEachHook = runnableName.match(/after each/)
+          const isBeforeEachHook = runnableName.match(/before each/)
 
-        // if we've been told to skip hooks at a certain nested level
-        // this happens if we're handling a runnable that is going to retry due to failing in a hook
-        const shouldSkipRunnable = test._skipHooksWithLevelGreaterThan != null
-          && isHook
+          // if we've been told to skip hooks at a certain nested level
+          // this happens if we're handling a runnable that is going to retry due to failing in a hook
+          const shouldSkipRunnable = test._skipHooksWithLevelGreaterThan != null
           && (isBeforeEachHook || isAfterEachHook && runnable.titlePath().length > test._skipHooksWithLevelGreaterThan)
 
-        if (shouldSkipRunnable) {
-          return _next.call(this)
+          if (shouldSkipRunnable) {
+            return _next.call(this)
+          }
         }
 
         const next = (err) => {
@@ -1432,12 +1526,12 @@ export default {
               // reset runnable duration to include lifecycle
               // and afterFn timings purely for the mocha runner.
               // this is what it 'feels' like to the user
-              runnable.duration = wallClockEnd - wallClockStartedAt
+              runnable.duration = duration(wallClockEnd, wallClockStartedAt)
 
-              setTestTimingsForHook(test, hookName, {
-                hookId: runnable.hookId,
-                fnDuration: fnDurationEnd - fnDurationStart,
-                afterFnDuration: afterFnDurationEnd - afterFnDurationStart,
+              setTestTimingsForHook(test, runnableName, {
+                hookId: runnableId,
+                fnDuration: duration(fnDurationEnd!, fnDurationStart!),
+                afterFnDuration: duration(afterFnDurationEnd, afterFnDurationStart!),
               })
 
               break
@@ -1446,13 +1540,13 @@ export default {
               // if we are currently on a test then
               // recalculate its duration to be based
               // against that (purely for the mocha reporter)
-              test.duration = wallClockEnd - test.wallClockStartedAt
+              test.duration = duration(wallClockEnd, test.wallClockStartedAt)
 
               // but still preserve its actual function
               // body duration for timings
-              setTestTimings(test, 'test', {
-                fnDuration: fnDurationEnd - fnDurationStart,
-                afterFnDuration: afterFnDurationEnd - afterFnDurationStart,
+              setTestTimings(test, runnableName, {
+                fnDuration: duration(fnDurationEnd!, fnDurationStart!),
+                afterFnDuration: duration(afterFnDurationEnd!, afterFnDurationStart!),
               })
 
               break
@@ -1474,7 +1568,7 @@ export default {
           // attach error right now
           // if we have one
           if (err) {
-            const PendingErrorMessages = ['sync skip', 'async skip call', 'async skip; aborting execution']
+            const PendingErrorMessages = ['sync skip', 'sync skip; aborting execution', 'async skip call', 'async skip; aborting execution']
 
             if (_.find(PendingErrorMessages, err.message) !== undefined) {
               err.isPending = true
@@ -1512,6 +1606,19 @@ export default {
           })
         }
 
+        // if either the TEST_BEFORE_RUN_EVENT or TEST_BEFORE_RUN_ASYNC_EVENT throws
+        // then override the test function to associate the error to the test
+        const handleBeforeTestEventError = (err: Error): boolean => {
+          const { fn } = runnable
+
+          runnable.fn = () => {
+            runnable.fn = fn
+            throw err
+          }
+
+          return false
+        }
+
         // TODO: handle promise timeouts here!
         // whenever any runnable is about to run
         // we figure out what test its associated to
@@ -1526,39 +1633,32 @@ export default {
             fire(TEST_BEFORE_RUN_EVENT, test, Cypress)
           }
 
+          return true
+        })
+        .catch(handleBeforeTestEventError)
+        .then((ranSuccessfulBeforeRunEvent: boolean) => {
           cy.state('duringUserTestExecution', false)
+          Cypress.primaryOriginCommunicator.toAllSpecBridges('sync:state', { 'duringUserTestExecution': false })
 
           // our runnable is about to run, so let cy know. this enables
           // us to always have a correct runnable set even when we are
           // running lifecycle events
           // and also get back a function result handler that we use as
           // an async seam
-          cy.setRunnable(runnable, hookId)
-        })
-        .then(() => {
-          return testBeforeRunAsync(test, Cypress)
-        })
-        .catch((err) => {
-          // TODO: if our async tasks fail
-          // then allow us to cause the test
-          // to fail here by blowing up its fn
-          // callback
-          const { fn } = runnable
+          cy.setRunnable(runnable, runnableId)
 
-          const restore = () => {
-            return runnable.fn = fn
+          if (ranSuccessfulBeforeRunEvent) {
+            return testBeforeRunAsync(test, Cypress)
           }
 
-          runnable.fn = () => {
-            restore()
-
-            throw err
-          }
-        }).finally(() => {
+          return null
+        })
+        .catch(handleBeforeTestEventError)
+        .finally(() => {
           if (lifecycleStart) {
             // capture how long the lifecycle took as part
             // of the overall wallClockDuration of our test
-            setTestTimings(test, 'lifecycle', new Date() - lifecycleStart)
+            setTestTimings(test, 'lifecycle', duration(new Date(), lifecycleStart))
           }
 
           // capture the moment we're about to invoke
@@ -1593,7 +1693,7 @@ export default {
       },
 
       setNumLogs (num) {
-        return $Log.setCounter(num)
+        return LogUtils.setCounter(num)
       },
 
       getEmissions () {
@@ -1648,25 +1748,48 @@ export default {
         _runner.removeAllListeners()
       },
 
-      getDisplayPropsForLog: $Log.getDisplayProps,
+      getDisplayPropsForLog: LogUtils.getDisplayProps,
 
-      getConsolePropsForLogById (logId) {
-        const attrs = _logsById[logId]
+      getConsolePropsForLog (testId, logId) {
+        if (_skipCollectingLogs) return
 
-        if (attrs) {
-          return $Log.getConsoleProps(attrs)
+        const test = getTestById(testId)
+
+        if (!test) return
+
+        const logAttrs = _.find(test.commands || [], (log) => log.id === logId)
+
+        if (logAttrs) {
+          if (logAttrs._hasBeenCleanedUp) {
+            return { Message: `The command details and snapshot has been cleaned up to reduce the number of tests in memory.` }
+          }
+
+          return LogUtils.getConsoleProps(logAttrs)
         }
+
+        return
       },
 
-      getSnapshotPropsForLogById (logId) {
-        const attrs = _logsById[logId]
+      getSnapshotPropsForLog (testId, logId) {
+        if (_skipCollectingLogs) return
 
-        if (attrs) {
-          return $Log.getSnapshotProps(attrs)
+        const test = getTestById(testId)
+
+        if (!test) return
+
+        const logAttrs = _.find(test.commands || [], (log) => log.id === logId)
+
+        if (logAttrs) {
+          return LogUtils.getSnapshotProps(logAttrs)
         }
+
+        return
       },
 
-      resumeAtTest (id, emissions = {}) {
+      resumeAtTest (id, emissions: Emissions = {
+        started: {},
+        ended: {},
+      }) {
         _resumedAtTestIndex = getTestIndexFromId(id)
 
         _emissions = emissions
@@ -1699,7 +1822,7 @@ export default {
                 // now, so lets store that
                 attrs._hasBeenCleanedUp = true
 
-                return $Log.reduceMemory(attrs)
+                return LogUtils.reduceMemory(attrs)
               })
             })
 
@@ -1711,11 +1834,9 @@ export default {
       },
 
       addLog (attrs, isInteractive) {
-        // we dont need to hold a log reference
-        // to anything in memory when we're headless
-        // because you cannot inspect any logs
-
-        if (!isInteractive) {
+        // we don't need to hold a log reference to anything in memory when we don't
+        // render the report or are headless because you cannot inspect any logs
+        if (_skipCollectingLogs || !isInteractive) {
           return
         }
 
@@ -1727,14 +1848,20 @@ export default {
           return
         }
 
-        // if this test isnt in the current queue
+        // if this test isn't in the current queue
         // then go ahead and add it
         if (!_testsQueueById[test.id]) {
           _testsQueueById[test.id] = true
           _testsQueue.push(test)
         }
 
-        const existing = _logsById[attrs.id]
+        const { instrument } = attrs
+
+        // pluralize the instrument as a property on the runnable
+        const name = `${instrument}s`
+        const logs = test[name] != null ? test[name] : (test[name] = [])
+
+        const existing = _.find(logs, (log) => log.id === attrs.id)
 
         if (existing) {
           // because log:state:changed may
@@ -1750,21 +1877,7 @@ export default {
           return _.extend(existing, attrs)
         }
 
-        _logsById[attrs.id] = attrs
-
-        const { testId, instrument } = attrs
-
-        test = getTestById(testId)
-
-        if (test) {
-          // pluralize the instrument
-          // as a property on the runnable
-          let name
-          const logs = test[name = `${instrument}s`] != null ? test[name] : (test[name] = [])
-
-          // else push it onto the logs
-          return logs.push(attrs)
-        }
+        return logs.push(attrs)
       },
     }
   },
@@ -1775,7 +1888,7 @@ const mixinLogs = (test) => {
     const logs = test[type]
 
     if (logs) {
-      test[type] = _.map(logs, $Log.toSerializedJSON)
+      test[type] = _.map(logs, LogUtils.toSerializedJSON)
     }
   })
 }

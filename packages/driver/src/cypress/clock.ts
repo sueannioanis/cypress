@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import _ from 'lodash'
 import fakeTimers from '@sinonjs/fake-timers'
 
@@ -48,10 +46,16 @@ export const create = (win, now, methods) => {
     return _.pick(clock, 'now', 'methods')
   }
 
+  const setSystemTime = (now) => {
+    clock.setSystemTime(now)
+  }
+
   return {
     tick,
 
     restore,
+
+    setSystemTime,
 
     bind,
 
@@ -59,3 +63,5 @@ export const create = (win, now, methods) => {
 
   }
 }
+
+export type Clock = ReturnType<typeof create>

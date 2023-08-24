@@ -1,6 +1,5 @@
 import systemTests, { expect } from '../lib/system-tests'
 import Fixtures from '../lib/fixtures'
-import path from 'path'
 
 const verifyPassedAndFailedAreSame = (expectedFailures) => {
   return ({ stdout }) => {
@@ -13,18 +12,21 @@ const verifyPassedAndFailedAreSame = (expectedFailures) => {
 describe('e2e error ui', function () {
   systemTests.setup()
 
+  beforeEach(async () => {
+    await Fixtures.scaffoldProject('e2e')
+  })
+
   ;[
     'webpack-preprocessor',
     'webpack-preprocessor-ts-loader',
     'webpack-preprocessor-ts-loader-compiler-options',
-    // TODO: unskip this once we understand why it is failing
-    // @see https://github.com/cypress-io/cypress/issues/18497
-    // 'webpack-preprocessor-awesome-typescript-loader',
+    'webpack-preprocessor-awesome-typescript-loader',
   ]
   .forEach((project) => {
     systemTests.it(`handles sourcemaps in webpack for project: ${project}`, {
-      project: Fixtures.projectPath(project),
-      spec: 'failing_spec.*',
+      browser: '!webkit', // TODO(webkit): fix+unskip
+      project,
+      spec: 'failing.*',
       expectedExitCode: 1,
       onRun (exec) {
         return exec().then(verifyPassedAndFailedAreSame(1))
@@ -33,11 +35,14 @@ describe('e2e error ui', function () {
   })
 
   // https://github.com/cypress-io/cypress/issues/16255
-  systemTests.it('handles errors when integration folder is outside of project root', {
-    project: path.join(Fixtures.projectPath('integration-outside-project-root'), 'project-root'),
-    spec: '../../../integration/failing_spec.js',
+  systemTests.it('handles errors when test files are outside of project root', {
+    browser: '!webkit', // TODO(webkit): fix+unskip
+    project: 'integration-outside-project-root/project-root',
+    spec: '../../../e2e/failing.cy.js',
     expectedExitCode: 1,
-    onRun (exec) {
+    onRun: async (exec) => {
+      await Fixtures.scaffoldProject('integration-outside-project-root')
+
       return exec().then(verifyPassedAndFailedAreSame(1))
     },
   })

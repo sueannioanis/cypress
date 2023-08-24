@@ -1,25 +1,57 @@
-import { $Location } from '../cypress/location'
+import { $Location, LocationObject } from '../cypress/location'
+import type { StateFunc } from '../cypress/state'
 import $utils from '../cypress/utils'
 
-export default {
-  create: (state) => {
-    return {
-      getRemoteLocation (key, win) {
-        try {
-          const remoteUrl = $utils.locToString(win ?? state('window'))
-          const location = $Location.create(remoteUrl)
+const getRemoteLocationFromCrossOriginWindow = (autWindow: Window): Promise<LocationObject> => {
+  return new Promise((resolve, reject) => {
+    const channel = new MessageChannel()
 
-          if (key) {
-            return location[key]
-          }
+    channel.port1.onmessage = ({ data }) => {
+      channel.port1.close()
+      resolve($Location.create(data))
+    }
 
-          return location
-        } catch (e) {
-          // it is possible we do not have access to the location
-          // for example, if the app has redirected to a 2nd domain
-          return ''
-        }
-      },
+    autWindow.postMessage('aut:cypress:location', '*', [channel.port2])
+  })
+}
+
+// eslint-disable-next-line @cypress/dev/arrow-body-multiline-braces
+export const create = (state: StateFunc) => ({
+  getRemoteLocation (key?: string | undefined, win?: Window) {
+    try {
+      const remoteUrl = $utils.locToString(win ?? state('window'))
+      const location = $Location.create(remoteUrl)
+
+      if (key) {
+        return location[key]
+      }
+
+      return location
+    } catch (e) {
+      // it is possible we do not have access to the location
+      // for example, if the app has redirected to a different origin
+      return ''
     }
   },
-}
+  async getCrossOriginRemoteLocation (win?: Window): Promise<LocationObject> {
+    const autWindow = win ?? state('window')
+
+    if (!autWindow) {
+      return $Location.create('')
+    }
+
+    let autLocation: LocationObject
+
+    try {
+      const remoteUrl = $utils.locToString(autWindow)
+
+      autLocation = $Location.create(remoteUrl)
+    } catch (e) {
+      autLocation = await getRemoteLocationFromCrossOriginWindow(autWindow)
+    }
+
+    return autLocation
+  },
+})
+
+export interface ILocation extends ReturnType<typeof create> {}

@@ -5,6 +5,9 @@ import $dom from '../../../dom'
 import $utils from '../../../cypress/utils'
 import $errUtils from '../../../cypress/error_utils'
 import $actionability from '../../actionability'
+import type { ElViewportPostion } from '../../../dom/coordinates'
+import type { $Cy } from '../../../cypress/cy'
+import type { ForceEl } from '../../mouse'
 
 const formatMouseEvents = (events) => {
   return _.map(events, (val, key) => {
@@ -36,15 +39,16 @@ const formatMouseEvents = (events) => {
 // TODO: remove any, Function, Record
 type MouseActionOptions = {
   subject: any
+  subjectFn?: () => any
   positionOrX: string | number
   y: number
   userOptions: Record<string, any>
-  onReady: Function
+  onReady: (fromElViewport: ElViewportPostion, forceEl: ForceEl) => any
   onTable: Function
   defaultOptions?: Record<string, any>
 }
 
-export default (Commands, Cypress, cy, state, config) => {
+export default (Commands, Cypress, cy: $Cy, state, config) => {
   const { mouse, keyboard } = cy.devices
 
   const mouseAction = (eventName, { subject, positionOrX, y, userOptions, onReady, onTable, defaultOptions }: MouseActionOptions) => {
@@ -102,7 +106,10 @@ export default (Commands, Cypress, cy, state, config) => {
       }
     }
 
-    const perform = (el) => {
+    const subjectChain = cy.subjectChain()
+    const clickedElements: any[] = []
+
+    const perform = (el, index) => {
       let deltaOptions
       const $el = $dom.wrap(el)
 
@@ -128,7 +135,7 @@ export default (Commands, Cypress, cy, state, config) => {
 
       // add this delay delta to the runnables timeout because we delay
       // by it below before performing each click
-      cy.timeout($actionability.delay, true, eventName)
+      cy.timeout($actionability.delay, true)
 
       const createLog = (domEvents, fromElWindow, fromAutWindow) => {
         let consoleObj
@@ -147,7 +154,7 @@ export default (Commands, Cypress, cy, state, config) => {
             'Options': deltaOptions,
           })
 
-          if (options.$el.get(0) !== elClicked) {
+          if (options.$el.get(index) !== elClicked) {
             // only do this if $elToClick isnt $el
             consoleObj['Actual Element Clicked'] = $dom.getElements($(elClicked))
           }
@@ -191,16 +198,20 @@ export default (Commands, Cypress, cy, state, config) => {
       // once we establish the coordinates and the element
       // passes all of the internal checks
       return $actionability.verify(cy, $el, config, individualOptions, {
+        subjectFn: options.subjectFn || (() => cy.getSubjectFromChain(subjectChain).eq(index)),
+
         onScroll ($el, type) {
           return Cypress.action('cy:scrolled', $el, type)
         },
 
-        onReady ($elToClick, coords) {
+        onReady ($elToClick, coords, $el) {
           const { fromElViewport, fromElWindow, fromAutWindow } = coords
 
           const forceEl = options.force && $elToClick.get(0)
 
           const moveEvents = mouse.move(fromElViewport, forceEl)
+
+          clickedElements.push($el[0])
 
           flagModifiers(true)
 
@@ -217,22 +228,24 @@ export default (Commands, Cypress, cy, state, config) => {
         },
       })
       .catch((err) => {
-        // snapshot only on click failure
-        err.onFail = function () {
-          if (options._log) {
-            return options._log.snapshot()
-          }
-        }
-
         // if we give up on waiting for actionability then
         // lets throw this error and log the command
-        return $errUtils.throwErr(err, { onFail: options._log })
+        return $errUtils.throwErr(err, {
+          onFail (err) {
+            if (options._log) {
+              // snapshot only on click failure
+              options._log.snapshot().error(err)
+            }
+          },
+        })
       })
     }
 
     return Promise
     .each(options.$el.toArray(), perform)
     .then(() => {
+      options.$el = cy.$$(clickedElements)
+
       if (options.verify === false) {
         return options.$el
       }

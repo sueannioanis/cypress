@@ -1,7 +1,6 @@
-// @ts-nocheck
-
 import _ from 'lodash'
 import Promise from 'bluebird'
+import { basename } from 'path'
 
 import $errUtils from '../../cypress/error_utils'
 
@@ -43,7 +42,7 @@ export default (Commands, Cypress, cy, state, config) => {
         return Promise.resolve(clone(resp))
       }
 
-      let options = {}
+      let options: Record<string, any> = {}
 
       if (_.isObject(args[0])) {
         options = args[0]
@@ -83,6 +82,9 @@ export default (Commands, Cypress, cy, state, config) => {
         // add the fixture to the cache
         // so it can just be returned next time
         cache[fixture] = response
+
+        // Add the filename as a symbol, in case we need it later (such as when storing an alias)
+        state('current').set('fileName', basename(fixture))
 
         // return the cloned response
         return clone(response)

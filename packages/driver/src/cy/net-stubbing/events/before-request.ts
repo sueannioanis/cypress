@@ -167,7 +167,7 @@ export const onBeforeRequest: HandlerFn<CyHttpMessages.IncomingRequest> = (Cypre
     },
     on (eventName, handler) {
       if (!validEvents.includes(eventName)) {
-        return $errUtils.throwErrByPath('net_stubbing.request_handling.unknown_event', {
+        $errUtils.throwErrByPath('net_stubbing.request_handling.unknown_event', {
           args: {
             validEvents,
             eventName,
@@ -176,7 +176,7 @@ export const onBeforeRequest: HandlerFn<CyHttpMessages.IncomingRequest> = (Cypre
       }
 
       if (!_.isFunction(handler)) {
-        return $errUtils.throwErrByPath('net_stubbing.request_handling.event_needs_handler')
+        $errUtils.throwErrByPath('net_stubbing.request_handling.event_needs_handler')
       }
 
       subscribe(eventName, handler)
@@ -302,7 +302,7 @@ export const onBeforeRequest: HandlerFn<CyHttpMessages.IncomingRequest> = (Cypre
     resolve = _resolve
   })
 
-  request.setLogFlag = Cypress.ProxyLogging.logInterception(request, route).setFlag
+  request.setLogFlag = Cypress.ProxyLogging.logInterception(request, route)?.setFlag || (() => {})
 
   // TODO: this misnomer is a holdover from XHR, should be numRequests
   route.log.set('numResponses', (route.log.get('numResponses') || 0) + 1)

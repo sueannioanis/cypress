@@ -1,3 +1,4 @@
+const express = require('express')
 const fs = require('fs')
 const path = require('path')
 const Fixtures = require('../lib/fixtures')
@@ -10,6 +11,11 @@ const e2ePath = Fixtures.projectPath('e2e')
 let requestsForCache = 0
 
 const onServer = function (app) {
+  app.use(express.static(e2ePath, {
+    // force caching to happen
+    maxAge: 3600000,
+  }))
+
   app.post('/write/:text', (req, res) => {
     const file = path.join(e2ePath, 'index.html')
 
@@ -23,7 +29,7 @@ const onServer = function (app) {
     })
   })
 
-  return app.get('/cached', (req, res) => {
+  app.get('/cached', (req, res) => {
     requestsForCache += 1
 
     return res
@@ -37,30 +43,26 @@ describe('e2e cache', () => {
     servers: {
       port: 1515,
       onServer,
-      static: {
-        // force caching to happen
-        maxAge: 3600000,
-      },
     },
   })
 
   it('passes', function () {
     return systemTests.exec(this, {
-      spec: 'cache_spec.js',
+      spec: 'cache.cy.js',
       snapshot: true,
     })
   })
 
   it('clears cache when browser is spawned', function () {
     return systemTests.exec(this, {
-      spec: 'cache_clearing_spec.js',
+      spec: 'cache_clearing.cy.js',
     })
     .then(() => {
       // only 1 request should have gone out
       expect(requestsForCache).to.eq(1)
 
       return systemTests.exec(this, {
-        spec: 'cache_clearing_spec.js',
+        spec: 'cache_clearing.cy.js',
       })
       .then(() => {
         // and after the cache is cleaned before

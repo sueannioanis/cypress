@@ -5,12 +5,14 @@ const EE = require('events')
 const la = require('lazy-ass')
 const check = require('check-more-types')
 
-const menu = require(`${root}../lib/gui/menu`)
-const plugins = require(`${root}../lib/plugins`)
-const Windows = require(`${root}../lib/gui/windows`)
-const electron = require(`${root}../lib/browsers/electron`)
-const savedState = require(`${root}../lib/saved_state`)
-const { Automation } = require(`${root}../lib/automation`)
+const menu = require(`../../../lib/gui/menu`)
+const plugins = require(`../../../lib/plugins`)
+const Windows = require(`../../../lib/gui/windows`)
+const electron = require(`../../../lib/browsers/electron`)
+const savedState = require(`../../../lib/saved_state`)
+const { Automation } = require(`../../../lib/automation`)
+const { BrowserCriClient } = require('../../../lib/browsers/browser-cri-client')
+const electronApp = require('../../../lib/util/electron-app')
 
 const ELECTRON_PID = 10001
 
@@ -19,12 +21,14 @@ describe('lib/browsers/electron', () => {
     this.url = 'https://foo.com'
     this.state = {}
     this.options = {
+      isTextTerminal: false,
       some: 'var',
       projectRoot: '/foo/',
       onWarning: sinon.stub().returns(),
       browser: {
         isHeadless: false,
       },
+      onError: () => {},
     }
 
     this.automation = new Automation('foo', 'bar', 'baz')
@@ -35,6 +39,8 @@ describe('lib/browsers/electron', () => {
       close: sinon.stub(),
       loadURL: sinon.stub(),
       focusOnWebView: sinon.stub(),
+      show: sinon.stub(),
+      destroy: sinon.stub(),
       webContents: {
         session: {
           cookies: {
@@ -43,18 +49,34 @@ describe('lib/browsers/electron', () => {
             remove: sinon.stub(),
           },
           on: sinon.stub(),
+          webRequest: {
+            onBeforeSendHeaders () {},
+          },
+          setUserAgent: sinon.stub(),
+          getUserAgent: sinon.stub(),
+          clearCache: sinon.stub(),
         },
         getOSProcessId: sinon.stub().returns(ELECTRON_PID),
-        'debugger': {
-          attach: sinon.stub().returns(),
-          sendCommand: sinon.stub().resolves(),
-          on: sinon.stub().returns(),
-        },
       },
     })
 
     sinon.stub(Windows, 'installExtension').returns()
     sinon.stub(Windows, 'removeAllExtensions').returns()
+    sinon.stub(electronApp, 'getRemoteDebuggingPort').resolves(1234)
+
+    // mock CRI client during testing
+    this.pageCriClient = {
+      send: sinon.stub().resolves(),
+      on: sinon.stub(),
+    }
+
+    this.browserCriClient = {
+      attachToTargetUrl: sinon.stub().resolves(this.pageCriClient),
+      currentlyAttachedTarget: this.pageCriClient,
+      close: sinon.stub().resolves(),
+    }
+
+    sinon.stub(BrowserCriClient, 'create').resolves(this.browserCriClient)
 
     this.stubForOpen = function () {
       sinon.stub(electron, '_render').resolves(this.win)
@@ -68,6 +90,18 @@ describe('lib/browsers/electron', () => {
         return sinon.stub(state, 'get').resolves(this.state)
       })
     }
+  })
+
+  afterEach(function () {
+    electron.clearInstanceState()
+  })
+
+  context('.connectToNewSpec', () => {
+    it('throws an error', async function () {
+      expect(() => {
+        electron.connectToNewSpec({ isHeaded: true }, { url: 'http://www.example.com' }, this.automation)
+      }).to.throw('Attempting to connect to a new spec is not supported for electron, use open instead')
+    })
   })
 
   context('.open', () => {
@@ -86,10 +120,10 @@ describe('lib/browsers/electron', () => {
 
         expect(_.keys(options)).to.deep.eq(preferencesKeys)
 
-        expect(electron._render.firstCall.args[3]).to.deep.eql({
-          projectRoot: this.options.projectRoot,
-          isTextTerminal: this.options.isTextTerminal,
-        })
+        const electronOptionsArg = electron._render.firstCall.args[3]
+
+        expect(electronOptionsArg.projectRoot).to.eq(this.options.projectRoot)
+        expect(electronOptionsArg.isTextTerminal).to.eq(this.options.isTextTerminal)
 
         expect(electron._render).to.be.calledWith(
           this.url,
@@ -107,7 +141,8 @@ describe('lib/browsers/electron', () => {
 
         expect(this.win.webContents.getOSProcessId).to.be.calledOnce
 
-        expect(obj.pid).to.deep.eq([ELECTRON_PID])
+        expect(obj.pid).to.eq(ELECTRON_PID)
+        expect(obj.allPids).to.deep.eq([ELECTRON_PID])
       })
     })
 
@@ -171,20 +206,20 @@ describe('lib/browsers/electron', () => {
   context('._launch', () => {
     beforeEach(() => {
       sinon.stub(menu, 'set')
-      sinon.stub(electron, '_attachDebugger').resolves()
       sinon.stub(electron, '_clearCache').resolves()
       sinon.stub(electron, '_setProxy').resolves()
       sinon.stub(electron, '_setUserAgent')
+      sinon.stub(electron, '_getUserAgent')
     })
 
     it('sets menu.set whether or not its in headless mode', function () {
-      return electron._launch(this.win, this.url, this.automation, { show: true })
+      return electron._launch(this.win, this.url, this.automation, { show: true, onError: () => {} })
       .then(() => {
-        expect(menu.set).to.be.calledWith({ withDevTools: true })
+        expect(menu.set).to.be.calledWith({ withInternalDevTools: true })
       }).then(() => {
         menu.set.reset()
 
-        return electron._launch(this.win, this.url, this.automation, { show: false })
+        return electron._launch(this.win, this.url, this.automation, { show: false, onError: () => {} })
       }).then(() => {
         expect(menu.set).not.to.be.called
       })
@@ -195,7 +230,7 @@ describe('lib/browsers/electron', () => {
       .then(() => {
         expect(electron._setUserAgent).not.to.be.called
       }).then(() => {
-        return electron._launch(this.win, this.url, this.automation, { userAgent: 'foo' })
+        return electron._launch(this.win, this.url, this.automation, { userAgent: 'foo', onError: () => {} })
       }).then(() => {
         expect(electron._setUserAgent).to.be.calledWith(this.win.webContents, 'foo')
       })
@@ -206,7 +241,7 @@ describe('lib/browsers/electron', () => {
       .then(() => {
         expect(electron._setProxy).not.to.be.called
       }).then(() => {
-        return electron._launch(this.win, this.url, this.automation, { proxyServer: 'foo' })
+        return electron._launch(this.win, this.url, this.automation, { proxyServer: 'foo', onError: () => {} })
       }).then(() => {
         expect(electron._setProxy).to.be.calledWith(this.win.webContents, 'foo')
       })
@@ -276,9 +311,293 @@ describe('lib/browsers/electron', () => {
 
       return electron._launch(this.win, this.url, this.automation, this.options)
       .then(() => {
-        expect(this.win.webContents.debugger.sendCommand).to.be.calledWith('Page.setDownloadBehavior', {
+        expect(this.pageCriClient.send).to.be.calledWith('Page.setDownloadBehavior', {
           behavior: 'allow',
           downloadPath: 'downloads',
+        })
+      })
+    })
+
+    it('registers onRequest automation middleware and calls show when requesting to be focused', function () {
+      sinon.spy(this.automation, 'use')
+
+      return electron._launch(this.win, this.url, this.automation, this.options)
+      .then(() => {
+        expect(this.automation.use).to.be.called
+        expect(this.automation.use.lastCall.args[0].onRequest).to.be.a('function')
+
+        this.automation.use.lastCall.args[0].onRequest('focus:browser:window')
+
+        expect(this.win.show).to.be.called
+      })
+    })
+
+    it('registers onRequest automation middleware and calls destroy when requesting to close the browser tabs', function () {
+      sinon.spy(this.automation, 'use')
+
+      return electron._launch(this.win, this.url, this.automation, this.options)
+      .then(() => {
+        expect(this.automation.use).to.be.called
+        expect(this.automation.use.lastCall.args[0].onRequest).to.be.a('function')
+
+        this.automation.use.lastCall.args[0].onRequest('reset:browser:tabs:for:next:test', { shouldKeepTabOpen: true })
+
+        expect(this.win.destroy).to.be.called
+      })
+    })
+
+    describe('adding header to AUT iframe request', function () {
+      beforeEach(function () {
+        const frameTree = {
+          frameTree: {
+            childFrames: [
+              {
+                frame: {
+                  id: 'aut-frame-id',
+                  name: 'Your project: "FakeBlock"',
+                },
+              },
+              {
+                frame: {
+                  id: 'spec-frame-id',
+                  name: 'Your Spec: "spec.js"',
+                },
+              },
+            ],
+          },
+        }
+
+        this.pageCriClient.send.withArgs('Page.getFrameTree').resolves(frameTree)
+      })
+
+      it('sends Fetch.enable only for Document ResourceType', async function () {
+        await electron._launch(this.win, this.url, this.automation, this.options)
+
+        expect(this.pageCriClient.send).to.have.been.calledWith('Fetch.enable', {
+          patterns: [{
+            resourceType: 'Document',
+          }],
+        })
+      })
+
+      it('does not add header when not a document', async function () {
+        await electron._launch(this.win, this.url, this.automation, this.options)
+
+        this.pageCriClient.on.withArgs('Fetch.requestPaused').yield({
+          requestId: '1234',
+          resourceType: 'Script',
+        })
+
+        expect(this.pageCriClient.send).not.to.be.calledWith('Fetch.continueRequest')
+      })
+
+      it('does not add header when it is a spec frame request', async function () {
+        await electron._launch(this.win, this.url, this.automation, this.options)
+
+        this.pageCriClient.on.withArgs('Page.frameAttached').yield()
+
+        await this.pageCriClient.on.withArgs('Fetch.requestPaused').args[0][1]({
+          frameId: 'spec-frame-id',
+          requestId: '1234',
+          resourceType: 'Document',
+          request: {
+            url: '/__cypress/integration/spec.js',
+          },
+        })
+
+        expect(this.pageCriClient.send).to.be.calledWith('Fetch.continueRequest', {
+          requestId: '1234',
+        })
+      })
+
+      it('appends X-Cypress-Is-AUT-Frame header to AUT iframe request', async function () {
+        await electron._launch(this.win, this.url, this.automation, this.options)
+
+        this.pageCriClient.on.withArgs('Page.frameAttached').yield()
+
+        await this.pageCriClient.on.withArgs('Fetch.requestPaused').args[0][1]({
+          frameId: 'aut-frame-id',
+          requestId: '1234',
+          resourceType: 'Document',
+          request: {
+            url: 'http://localhost:3000/index.html',
+            headers: {
+              'X-Foo': 'Bar',
+            },
+          },
+        })
+
+        expect(this.pageCriClient.send).to.be.calledWith('Fetch.continueRequest', {
+          requestId: '1234',
+          headers: [
+            {
+              name: 'X-Foo',
+              value: 'Bar',
+            },
+            {
+              name: 'X-Cypress-Is-AUT-Frame',
+              value: 'true',
+            },
+          ],
+        })
+      })
+
+      it('gets frame tree on Page.frameAttached', async function () {
+        await electron._launch(this.win, this.url, this.automation, this.options)
+
+        this.pageCriClient.on.withArgs('Page.frameAttached').yield()
+
+        expect(this.pageCriClient.send).to.be.calledWith('Page.getFrameTree')
+      })
+
+      it('gets frame tree on Page.frameDetached', async function () {
+        await electron._launch(this.win, this.url, this.automation, this.options)
+
+        this.pageCriClient.on.withArgs('Page.frameDetached').yield()
+
+        expect(this.pageCriClient.send).to.be.calledWith('Page.getFrameTree')
+      })
+    })
+  })
+
+  describe('setUserAgent with experimentalModifyObstructiveThirdPartyCode', () => {
+    let userAgent
+
+    beforeEach(function () {
+      userAgent = ''
+      this.win.webContents.session.getUserAgent.callsFake(() => userAgent)
+    })
+
+    describe('disabled', function () {
+      it('does not attempt to replace the user agent', function () {
+        this.options.experimentalModifyObstructiveThirdPartyCode = false
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          expect(this.win.webContents.session.setUserAgent).not.to.be.called
+          expect(this.pageCriClient.send).not.to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent,
+          })
+        })
+      })
+    })
+
+    describe('enabled and attempts to replace obstructive user agent string containing:', function () {
+      beforeEach(function () {
+        this.options.experimentalModifyObstructiveThirdPartyCode = true
+      })
+
+      it('does not attempt to replace the user agent if the user passes in an explicit user agent', function () {
+        userAgent = 'barbaz'
+        this.options.experimentalModifyObstructiveThirdPartyCode = false
+        this.options.userAgent = 'foobar'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          expect(this.win.webContents.session.setUserAgent).to.be.calledWith('foobar')
+          expect(this.win.webContents.session.setUserAgent).not.to.be.calledWith('barbaz')
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: 'foobar',
+          })
+        })
+      })
+
+      it('versioned cypress', function () {
+        userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cypress/10.0.3 Chrome/100.0.4896.75 Electron/18.0.4 Safari/537.36'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          const expectedUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36'
+
+          expect(this.win.webContents.session.setUserAgent).to.have.been.calledWith(expectedUA)
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: expectedUA,
+          })
+        })
+      })
+
+      it('development cypress', function () {
+        userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cypress/0.0.0-development Chrome/100.0.4896.75 Electron/18.0.4 Safari/537.36'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          const expectedUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36'
+
+          expect(this.win.webContents.session.setUserAgent).to.have.been.calledWith(expectedUA)
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: expectedUA,
+          })
+        })
+      })
+
+      it('older Windows user agent', function () {
+        userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) electron/1.0.0 Chrome/53.0.2785.113 Electron/1.4.3 Safari/537.36'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          const expectedUA = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.113 Safari/537.36'
+
+          expect(this.win.webContents.session.setUserAgent).to.have.been.calledWith(expectedUA)
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: expectedUA,
+          })
+        })
+      })
+
+      it('newer Windows user agent', function () {
+        userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Teams/1.5.00.4689 Chrome/85.0.4183.121 Electron/10.4.7 Safari/537.36'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          const expectedUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Teams/1.5.00.4689 Chrome/85.0.4183.121 Safari/537.36'
+
+          expect(this.win.webContents.session.setUserAgent).to.have.been.calledWith(expectedUA)
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: expectedUA,
+          })
+        })
+      })
+
+      it('Linux user agent', function () {
+        userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Typora/0.9.93 Chrome/83.0.4103.119 Electron/9.0.5 Safari/E7FBAF'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          const expectedUA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Typora/0.9.93 Chrome/83.0.4103.119 Safari/E7FBAF'
+
+          expect(this.win.webContents.session.setUserAgent).to.have.been.calledWith(expectedUA)
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: expectedUA,
+          })
+        })
+      })
+
+      it('older MacOS user agent', function () {
+        // this user agent containing Cypress was actually a common UA found on a website for Electron purposes...
+        userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cypress/8.3.0 Chrome/91.0.4472.124 Electron/13.1.7 Safari/537.36'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          const expectedUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+
+          expect(this.win.webContents.session.setUserAgent).to.have.been.calledWith(expectedUA)
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: expectedUA,
+          })
+        })
+      })
+
+      it('newer MacOS user agent', function () {
+        userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36'
+
+        return electron._launch(this.win, this.url, this.automation, this.options)
+        .then(() => {
+          const expectedUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36'
+
+          expect(this.win.webContents.session.setUserAgent).to.have.been.calledWith(expectedUA)
+          expect(this.pageCriClient.send).to.be.calledWith('Network.setUserAgentOverride', {
+            userAgent: expectedUA,
+          })
         })
       })
     })
@@ -289,6 +608,8 @@ describe('lib/browsers/electron', () => {
       this.newWin = {
         maximize: sinon.stub(),
         setSize: sinon.stub(),
+        show: sinon.stub(),
+        destroy: sinon.stub(),
         webContents: this.win.webContents,
       }
 
@@ -336,17 +657,6 @@ describe('lib/browsers/electron', () => {
       return electron._render(this.url, this.automation, this.preferences, this.options)
       .then(() => {
         expect(this.newWin.maximize).not.to.be.called
-      })
-    })
-
-    it('registers onRequest automation middleware', function () {
-      sinon.spy(this.automation, 'use')
-
-      return electron._render(this.url, this.automation, this.preferences, this.options)
-      .then(() => {
-        expect(Windows.create).to.be.calledWith(this.options.projectRoot, this.options)
-        expect(this.automation.use).to.be.called
-        expect(this.automation.use.lastCall.args[0].onRequest).to.be.a('function')
       })
     })
   })
@@ -407,15 +717,16 @@ describe('lib/browsers/electron', () => {
     })
 
     it('.onFocus', function () {
-      let opts = electron._defaultOptions('/foo', this.state, { show: true, browser: {} })
+      const headlessOpts = electron._defaultOptions('/foo', this.state, { browser: { isHeadless: false } })
 
-      opts.onFocus()
-      expect(menu.set).to.be.calledWith({ withDevTools: true })
+      headlessOpts.onFocus()
+      expect(menu.set).to.be.calledWith({ withInternalDevTools: true })
 
       menu.set.reset()
 
-      opts = electron._defaultOptions('/foo', this.state, { show: false, browser: {} })
-      opts.onFocus()
+      const headedOpts = electron._defaultOptions('/foo', this.state, { browser: { isHeadless: true } })
+
+      headedOpts.onFocus()
 
       expect(menu.set).not.to.be.called
     })
@@ -425,22 +736,19 @@ describe('lib/browsers/electron', () => {
         return sinon.stub(electron, '_launchChild').resolves(this.win)
       })
 
-      it('passes along event, url, parent window and options', function () {
+      it('passes along url, parent window and options', function () {
         const opts = electron._defaultOptions(this.options.projectRoot, this.state, this.options, this.automation)
 
-        const event = {}
         const parentWindow = {
           on: sinon.stub(),
         }
 
-        opts.onNewWindow.call(parentWindow, event, this.url)
+        opts.onNewWindow.call(parentWindow, { url: this.url })
 
-        expect(electron._launchChild).to.be.calledWith(
-          event, this.url, parentWindow, this.options.projectRoot, this.state, this.options, this.automation,
-        )
+        expect(electron._launchChild).to.be.calledWith(this.url, parentWindow, this.options.projectRoot, this.state, this.options, this.automation)
       })
 
-      it('adds pid of new BrowserWindow to pid list', function () {
+      it('adds pid of new BrowserWindow to allPids list', function () {
         const opts = electron._defaultOptions(this.options.projectRoot, this.state, this.options)
 
         const NEW_WINDOW_PID = ELECTRON_PID * 2
@@ -457,7 +765,7 @@ describe('lib/browsers/electron', () => {
         }).then((instance) => {
           return opts.onNewWindow.call(this.win, {}, this.url)
           .then(() => {
-            expect(instance.pid).to.deep.eq([ELECTRON_PID, NEW_WINDOW_PID])
+            expect(instance.allPids).to.deep.eq([ELECTRON_PID, NEW_WINDOW_PID])
           })
         })
       })
@@ -552,7 +860,7 @@ describe('lib/browsers/electron', () => {
         // once for main window, once for child
         expect(menu.set).to.be.calledTwice
 
-        expect(menu.set).to.be.calledWith({ withDevTools: true })
+        expect(menu.set).to.be.calledWith({ withInternalDevTools: true })
       })
     })
 
@@ -562,7 +870,7 @@ describe('lib/browsers/electron', () => {
         // once for main window, once for child, once for focus
         expect(menu.set).to.be.calledThrice
 
-        expect(menu.set).to.be.calledWith({ withDevTools: true })
+        expect(menu.set).to.be.calledWith({ withInternalDevTools: true })
       })
     })
 

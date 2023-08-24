@@ -12,13 +12,15 @@ import { launch } from '@packages/launcher'
 import appData from '../util/app_data'
 import { fs } from '../util/fs'
 import { CdpAutomation, screencastOpts } from './cdp_automation'
-import * as CriClient from './cri-client'
 import * as protocol from './protocol'
 import utils from './utils'
-import type { Browser } from './types'
-
-// TODO: this is defined in `cypress-npm-api` but there is currently no way to get there
-type CypressConfiguration = any
+import * as errors from '../errors'
+import type { Browser, BrowserInstance } from './types'
+import { BrowserCriClient } from './browser-cri-client'
+import type { CriClient } from './cri-client'
+import type { Automation } from '../automation'
+import type { BrowserLaunchOpts, BrowserNewTabOpts, RunModeVideoApi } from '@packages/types'
+import memory from './memory'
 
 const debug = debugModule('cypress:server:browsers:chrome')
 
@@ -26,6 +28,7 @@ const LOAD_EXTENSION = '--load-extension='
 const CHROME_VERSIONS_WITH_BUGGY_ROOT_LAYER_SCROLLING = '66 67'.split(' ')
 const CHROME_VERSION_INTRODUCING_PROXY_BYPASS_ON_LOOPBACK = 72
 const CHROME_VERSION_WITH_FPS_INCREASE = 89
+const CHROME_VERSION_INTRODUCING_HEADLESS_NEW = 112
 
 const CHROME_PREFERENCE_PATHS = {
   default: path.join('Default', 'Preferences'),
@@ -117,10 +120,15 @@ const DEFAULT_ARGS = [
   // write shared memory files into '/tmp' instead of '/dev/shm'
   // https://github.com/cypress-io/cypress/issues/5336
   '--disable-dev-shm-usage',
+
+  // enable precise memory info so performance.memory returns more accurate values
+  '--enable-precise-memory-info',
 ]
 
+let browserCriClient: BrowserCriClient | undefined
+
 /**
- * Reads all known preference files (CHROME_PREFERENCE_PATHS) from disk and retur
+ * Reads all known preference files (CHROME_PREFERENCE_PATHS) from disk and return
  * @param userDir
  */
 const _getChromePreferences = (userDir: string): Bluebird<ChromePreferences> => {
@@ -245,38 +253,12 @@ const _disableRestorePagesPrompt = function (userDir) {
   .catch(() => { })
 }
 
-// After the browser has been opened, we can connect to
-// its remote interface via a websocket.
-const _connectToChromeRemoteInterface = function (port, onError, browserDisplayName) {
-  // @ts-ignore
-  la(check.userPort(port), 'expected port number to connect CRI to', port)
+async function _recordVideo (cdpAutomation: CdpAutomation, videoOptions: RunModeVideoApi, browserMajorVersion: number) {
+  const screencastOptions = browserMajorVersion >= CHROME_VERSION_WITH_FPS_INCREASE ? screencastOpts() : screencastOpts(1)
 
-  debug('connecting to Chrome remote interface at random port %d', port)
+  const { writeVideoFrame } = await videoOptions.useFfmpegVideoController()
 
-  return protocol.getWsTargetFor(port, browserDisplayName)
-  .then((wsUrl) => {
-    debug('received wsUrl %s for port %d', wsUrl, port)
-
-    return CriClient.create(wsUrl, onError)
-  })
-}
-
-const _maybeRecordVideo = async function (client, options, browserMajorVersion) {
-  if (!options.onScreencastFrame) {
-    debug('options.onScreencastFrame is false')
-
-    return client
-  }
-
-  debug('starting screencast')
-  client.on('Page.screencastFrame', (meta) => {
-    options.onScreencastFrame(meta)
-    client.send('Page.screencastFrameAck', { sessionId: meta.sessionId })
-  })
-
-  await client.send('Page.startScreencast', browserMajorVersion >= CHROME_VERSION_WITH_FPS_INCREASE ? screencastOpts() : screencastOpts(1))
-
-  return client
+  await cdpAutomation.startVideoRecording(writeVideoFrame, screencastOptions)
 }
 
 // a utility function that navigates to the given URL
@@ -294,9 +276,7 @@ const _navigateUsingCRI = async function (client, url) {
   await client.send('Page.navigate', { url })
 }
 
-const _handleDownloads = async function (client, dir, automation) {
-  await client.send('Page.enable')
-
+const _handleDownloads = async function (client, downloadsFolder: string, automation) {
   client.on('Page.downloadWillBegin', (data) => {
     const downloadItem = {
       id: data.guid,
@@ -307,7 +287,7 @@ const _handleDownloads = async function (client, dir, automation) {
 
     if (filename) {
       // @ts-ignore
-      downloadItem.filePath = path.join(dir, data.suggestedFilename)
+      downloadItem.filePath = path.join(downloadsFolder, data.suggestedFilename)
       // @ts-ignore
       downloadItem.mime = mime.getType(data.suggestedFilename)
     }
@@ -325,14 +305,18 @@ const _handleDownloads = async function (client, dir, automation) {
 
   await client.send('Page.setDownloadBehavior', {
     behavior: 'allow',
-    downloadPath: dir,
+    downloadPath: downloadsFolder,
   })
 }
 
-const _setAutomation = (client, automation) => {
-  return automation.use(
-    new CdpAutomation(client.send, client.on, automation),
-  )
+let onReconnect: (client: CriClient) => Promise<void> = async () => undefined
+
+const _setAutomation = async (client: CriClient, automation: Automation, resetBrowserTargets: (shouldKeepTabOpen: boolean) => Promise<void>, options: BrowserLaunchOpts) => {
+  const cdpAutomation = await CdpAutomation.create(client.send, client.on, resetBrowserTargets, automation)
+
+  automation.use(cdpAutomation)
+
+  return cdpAutomation
 }
 
 export = {
@@ -346,9 +330,7 @@ export = {
 
   _removeRootExtension,
 
-  _connectToChromeRemoteInterface,
-
-  _maybeRecordVideo,
+  _recordVideo,
 
   _navigateUsingCRI,
 
@@ -362,7 +344,11 @@ export = {
 
   _writeChromePreferences,
 
-  async _writeExtension (browser: Browser, options) {
+  _getBrowserCriClient () {
+    return browserCriClient
+  },
+
+  async _writeExtension (browser: Browser, options: BrowserLaunchOpts) {
     if (browser.isHeadless) {
       debug('chrome is running headlessly, not installing extension')
 
@@ -382,7 +368,7 @@ export = {
     return extensionDest
   },
 
-  _getArgs (browser: Browser, options: CypressConfiguration, port: string) {
+  _getArgs (browser: Browser, options: BrowserLaunchOpts, port: string) {
     const args = ([] as string[]).concat(DEFAULT_ARGS)
 
     if (os.platform() === 'linux') {
@@ -424,7 +410,11 @@ export = {
     }
 
     if (isHeadless) {
-      args.push('--headless')
+      if (majorVersion >= CHROME_VERSION_INTRODUCING_HEADLESS_NEW) {
+        args.push('--headless=new')
+      } else {
+        args.push('--headless')
+      }
 
       // set default headless size to 1280x720
       // https://github.com/cypress-io/cypress/issues/6210
@@ -443,7 +433,97 @@ export = {
     return args
   },
 
-  async open (browser: Browser, url, options: CypressConfiguration = {}, automation) {
+  /**
+  * Clear instance state for the chrome instance, this is normally called in on kill or on exit.
+  */
+  clearInstanceState () {
+    debug('closing remote interface client')
+
+    // Do nothing on failure here since we're shutting down anyway
+    browserCriClient?.close().catch()
+    browserCriClient = undefined
+  },
+
+  async connectToNewSpec (browser: Browser, options: BrowserNewTabOpts, automation: Automation) {
+    debug('connecting to new chrome tab in existing instance with url and debugging port', { url: options.url })
+
+    const browserCriClient = this._getBrowserCriClient()
+
+    if (!browserCriClient) throw new Error('Missing browserCriClient in connectToNewSpec')
+
+    const pageCriClient = browserCriClient.currentlyAttachedTarget
+
+    if (!pageCriClient) throw new Error('Missing pageCriClient in connectToNewSpec')
+
+    if (!options.url) throw new Error('Missing url in connectToNewSpec')
+
+    await this.attachListeners(options.url, pageCriClient, automation, options)
+  },
+
+  async connectToExisting (browser: Browser, options: BrowserLaunchOpts, automation: Automation) {
+    const port = await protocol.getRemoteDebuggingPort()
+
+    debug('connecting to existing chrome instance with url and debugging port', { url: options.url, port })
+    if (!options.onError) throw new Error('Missing onError in connectToExisting')
+
+    const browserCriClient = await BrowserCriClient.create(['127.0.0.1'], port, browser.displayName, options.onError, onReconnect)
+
+    if (!options.url) throw new Error('Missing url in connectToExisting')
+
+    const pageCriClient = await browserCriClient.attachToTargetUrl(options.url)
+
+    await this._setAutomation(pageCriClient, automation, browserCriClient.resetBrowserTargets, options)
+  },
+
+  async attachListeners (url: string, pageCriClient: CriClient, automation: Automation, options: BrowserLaunchOpts | BrowserNewTabOpts) {
+    const browserCriClient = this._getBrowserCriClient()
+
+    // Handle chrome tab crashes.
+    pageCriClient.on('Inspector.targetCrashed', async () => {
+      const err = errors.get('RENDERER_CRASHED')
+
+      await memory.endProfiling()
+
+      if (!options.onError) {
+        errors.log(err)
+        throw new Error('Missing onError in attachListeners')
+      }
+
+      options.onError(err)
+    })
+
+    if (!browserCriClient) throw new Error('Missing browserCriClient in attachListeners')
+
+    debug('attaching listeners to chrome %o', { url, options })
+
+    const cdpAutomation = await this._setAutomation(pageCriClient, automation, browserCriClient.resetBrowserTargets, options)
+
+    onReconnect = (client: CriClient) => {
+      // if the client disconnects (e.g. due to a computer sleeping), update
+      // the frame tree on reconnect in cases there were changes while
+      // the client was disconnected
+      // @ts-expect-error
+      return cdpAutomation._updateFrameTree(client, 'onReconnect')()
+    }
+
+    await pageCriClient.send('Page.enable')
+
+    await options['onInitializeNewBrowserTab']?.()
+
+    await Promise.all([
+      options.videoApi && this._recordVideo(cdpAutomation, options.videoApi, Number(options.browser.majorVersion)),
+      this._handleDownloads(pageCriClient, options.downloadsFolder, automation),
+    ])
+
+    await this._navigateUsingCRI(pageCriClient, url)
+
+    await cdpAutomation._handlePausedRequests(pageCriClient)
+    cdpAutomation._listenForFrameTreeChanges(pageCriClient)
+
+    return cdpAutomation
+  },
+
+  async open (browser: Browser, url, options: BrowserLaunchOpts, automation: Automation): Promise<BrowserInstance> {
     const { isTextTerminal } = options
 
     const userDir = utils.getProfileDir(browser, isTextTerminal)
@@ -495,43 +575,44 @@ export = {
     // first allows us to connect the remote interface,
     // start video recording and then
     // we will load the actual page
-    const launchedBrowser = await launch(browser, 'about:blank', args)
+    const launchedBrowser = await launch(browser, 'about:blank', port, args, launchOptions.env) as unknown as BrowserInstance & { browserCriClient: BrowserCriClient}
 
     la(launchedBrowser, 'did not get launched browser instance')
 
     // SECOND connect to the Chrome remote interface
     // and when the connection is ready
     // navigate to the actual url
-    const criClient = await this._connectToChromeRemoteInterface(port, options.onError, browser.displayName)
+    if (!options.onError) throw new Error('Missing onError in chrome#open')
 
-    la(criClient, 'expected Chrome remote interface reference', criClient)
+    browserCriClient = await BrowserCriClient.create(['127.0.0.1'], port, browser.displayName, options.onError, onReconnect)
 
-    await criClient.ensureMinimumProtocolVersion('1.3')
-    .catch((err) => {
-      // if this minumum chrome version changes, sync it with
+    la(browserCriClient, 'expected Chrome remote interface reference', browserCriClient)
+
+    try {
+      browserCriClient.ensureMinimumProtocolVersion('1.3')
+    } catch (err: any) {
+      // if this minimum chrome version changes, sync it with
       // packages/web-config/webpack.config.base.ts and
       // npm/webpack-batteries-included-preprocessor/index.js
       throw new Error(`Cypress requires at least Chrome 64.\n\nDetails:\n${err.message}`)
-    })
-
-    this._setAutomation(criClient, automation)
+    }
 
     // monkey-patch the .kill method to that the CDP connection is closed
     const originalBrowserKill = launchedBrowser.kill
 
-    /* @ts-expect-error */
-    launchedBrowser.kill = async (...args) => {
-      debug('closing remote interface client')
+    launchedBrowser.browserCriClient = browserCriClient
 
-      await criClient.close()
+    launchedBrowser.kill = (...args) => {
+      this.clearInstanceState()
+
       debug('closing chrome')
 
-      await originalBrowserKill.apply(launchedBrowser, args)
+      originalBrowserKill.apply(launchedBrowser, args)
     }
 
-    await this._maybeRecordVideo(criClient, options, browser.majorVersion)
-    await this._navigateUsingCRI(criClient, url)
-    await this._handleDownloads(criClient, options.downloadsFolder, automation)
+    const pageCriClient = await browserCriClient.attachToTargetUrl('about:blank')
+
+    await this.attachListeners(url, pageCriClient, automation, options)
 
     // return the launched browser process
     // with additional method to close the remote connection

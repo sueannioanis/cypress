@@ -10,20 +10,22 @@ describe('e2e downloads', () => {
   systemTests.setup()
 
   systemTests.it('handles various file downloads', {
-    project: downloadsProject,
-    spec: 'downloads_spec.ts',
+    browser: '!webkit', // TODO(webkit): fix+unskip (implement downloads support)
+    project: 'downloads',
+    spec: 'downloads.cy.ts',
     config: {
       video: false,
     },
   })
 
   const fileExists = (fileName) => {
-    return fs.pathExists(path.join(Fixtures.projectPath('downloads'), 'cypress', 'dls', fileName))
+    return fs.pathExists(path.join(downloadsProject, 'cypress', 'dls', fileName))
   }
 
   systemTests.it('allows changing the downloads folder', {
-    project: Fixtures.projectPath('downloads'),
-    spec: '*',
+    browser: '!webkit', // TODO(webkit): fix+unskip (implement downloads support)
+    project: 'downloads',
+    spec: 'downloads.cy.ts',
     config: {
       downloadsFolder: 'cypress/dls',
       video: false,
@@ -39,14 +41,14 @@ describe('e2e downloads', () => {
 
   it('trashes downloads between runs', async function () {
     await systemTests.exec(this, {
-      project: downloadsProject,
-      spec: 'download_csv_spec.ts',
+      project: 'downloads',
+      spec: 'download_csv.cy.ts',
     })
 
     // this run should trash the downloads from the above run
     await systemTests.exec(this, {
-      project: downloadsProject,
-      spec: 'simple_passing_spec.ts',
+      project: 'downloads',
+      spec: 'simple_passing.cy.ts',
     })
 
     const filePath = path.join(downloadsProject, 'cypress', 'downloads', 'records.csv')
@@ -57,14 +59,14 @@ describe('e2e downloads', () => {
 
   it('does not trash downloads between runs if trashAssetsBeforeRuns: false', async function () {
     await systemTests.exec(this, {
-      project: downloadsProject,
-      spec: 'download_csv_spec.ts',
+      project: 'downloads',
+      spec: 'download_csv.cy.ts',
     })
 
     // this run should _not_ trash the downloads from the above run
     await systemTests.exec(this, {
-      project: downloadsProject,
-      spec: 'simple_passing_spec.ts',
+      project: 'downloads',
+      spec: 'simple_passing.cy.ts',
       config: {
         trashAssetsBeforeRuns: false,
       },

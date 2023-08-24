@@ -1,8 +1,8 @@
 import _ from 'lodash'
-import { getCommonConfig, getSimpleConfig, HtmlWebpackPlugin, getCopyWebpackPlugin } from '@packages/web-config/webpack.config.base'
+import { waitUntilIconsBuilt } from '../../scripts/ensure-icons'
+import { getCommonConfig, getSimpleConfig, getCopyWebpackPlugin } from '@packages/web-config/webpack.config.base'
 import path from 'path'
 import webpack from 'webpack'
-import cyIcons from '@cypress/icons'
 
 const commonConfig = getCommonConfig()
 const CopyWebpackPlugin = getCopyWebpackPlugin()
@@ -21,34 +21,9 @@ babelLoader.use.options.plugins.push([require.resolve('babel-plugin-prismjs'), {
   'css': false,
 }])
 
-let pngRule
-// @ts-ignore
-const nonPngRules = _.filter(commonConfig.module.rules, (rule) => {
-  // @ts-ignore
-  if (rule.test.toString().includes('png')) {
-    pngRule = rule
-
-    return false
-  }
-
-  return true
-})
-
-pngRule.use[0].options = {
-  name: '[name].[ext]',
-  outputPath: 'img',
-  publicPath: '/__cypress/runner/img/',
-}
-
 // @ts-ignore
 const mainConfig: webpack.Configuration = {
   ...commonConfig,
-  module: {
-    rules: [
-      ...nonPngRules,
-      pngRule,
-    ],
-  },
   entry: {
     cypress_runner: [path.resolve(__dirname, 'src/index.js')],
   },
@@ -57,19 +32,6 @@ const mainConfig: webpack.Configuration = {
     filename: '[name].js',
   },
 }
-
-// @ts-ignore
-mainConfig.plugins = [
-  // @ts-ignore
-  ...mainConfig.plugins,
-  new HtmlWebpackPlugin({
-    template: path.resolve(__dirname, './static/index.html'),
-    inject: false,
-  }),
-  new CopyWebpackPlugin([{
-    from: cyIcons.getPathToFavicon('favicon.ico'),
-  }]),
-]
 
 mainConfig.resolve = {
   ...mainConfig.resolve,
@@ -84,11 +46,10 @@ mainConfig.resolve = {
 }
 
 // @ts-ignore
-const injectionConfig: webpack.Configuration = {
-  ...getSimpleConfig(),
-  mode: 'production',
+const crossOriginConfig: webpack.Configuration = {
+  ...commonConfig,
   entry: {
-    injection: [path.resolve(__dirname, 'injection/index.js')],
+    cypress_cross_origin_runner: [path.resolve(__dirname, 'src/cross-origin.js')],
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -96,4 +57,52 @@ const injectionConfig: webpack.Configuration = {
   },
 }
 
-export default [mainConfig, injectionConfig]
+// @ts-ignore
+const mainInjectionConfig: webpack.Configuration = {
+  ...getSimpleConfig(),
+  mode: 'production',
+  entry: {
+    injection: [path.resolve(__dirname, 'injection/main.js')],
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].js',
+  },
+}
+
+// @ts-ignore
+const crossOriginInjectionConfig: webpack.Configuration = {
+  ...getSimpleConfig(),
+  mode: 'production',
+  entry: {
+    injection_cross_origin: [path.resolve(__dirname, 'injection/cross-origin.js')],
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].js',
+  },
+}
+
+export default async function () {
+  await waitUntilIconsBuilt()
+
+  const cyIcons = require('@packages/icons')
+
+  mainConfig.plugins = [
+    // @ts-ignore
+    ...mainConfig.plugins,
+    new CopyWebpackPlugin({
+      patterns: [{
+        // @ts-ignore // There's a race condition in how these types are generated.
+        from: cyIcons.getPathToFavicon('favicon.ico'),
+      }],
+    }),
+  ]
+
+  return [
+    mainConfig,
+    mainInjectionConfig,
+    crossOriginConfig,
+    crossOriginInjectionConfig,
+  ]
+}

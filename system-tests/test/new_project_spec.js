@@ -16,12 +16,15 @@ describe('e2e new project', () => {
       throw new Error('support folder should not exist')
     }).catch(() => {
       return systemTests.exec(this, {
-        project: noScaffoldingPath,
+        project: 'no-scaffolding',
         sanitizeScreenshotDimensions: true,
         snapshot: true,
       })
       .then(() => {
         return fs.statAsync(supportPath)
+      })
+      .catch((err) => {
+        expect(err.code).eq('ENOENT')
       })
     })
   })

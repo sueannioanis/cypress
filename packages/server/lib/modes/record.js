@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const path = require('path')
 const la = require('lazy-ass')
 const chalk = require('chalk')
 const check = require('check-more-types')
@@ -8,30 +9,22 @@ const Promise = require('bluebird')
 const isForkPr = require('is-fork-pr')
 const commitInfo = require('@cypress/commit-info')
 
-const api = require('../api')
-const logger = require('../logger')
+const { hideKeys } = require('@packages/config')
+
+const api = require('../cloud/api')
+const exception = require('../cloud/exception')
+const upload = require('../cloud/upload')
+
 const errors = require('../errors')
 const capture = require('../capture')
-const upload = require('../upload')
 const Config = require('../config')
 const env = require('../util/env')
-const keys = require('../util/keys')
 const terminal = require('../util/terminal')
 const ciProvider = require('../util/ci_provider')
-const settings = require('../util/settings')
 const testsUtils = require('../util/tests_utils')
 const specWriter = require('../util/spec_writer')
 
-const logException = (err) => {
-  // give us up to 1 second to
-  // create this exception report
-  return logger.createException(err)
-  .timeout(1000)
-  .catch(() => {})
-}
-
 // dont yell about any errors either
-
 const runningInternalTests = () => {
   return env.get('CYPRESS_INTERNAL_SYSTEM_TESTS') === '1'
 }
@@ -54,8 +47,8 @@ const warnIfProjectIdButNoRecordOption = (projectId, options) => {
   }
 }
 
-const throwDashboardCannotProceed = ({ parallel, ciBuildId, group, err }) => {
-  const errMsg = parallel ? 'DASHBOARD_CANNOT_PROCEED_IN_PARALLEL' : 'DASHBOARD_CANNOT_PROCEED_IN_SERIAL'
+const throwCloudCannotProceed = ({ parallel, ciBuildId, group, err }) => {
+  const errMsg = parallel ? 'CLOUD_CANNOT_PROCEED_IN_PARALLEL' : 'CLOUD_CANNOT_PROCEED_IN_SERIAL'
 
   const errToThrow = errors.get(errMsg, {
     response: err,
@@ -73,7 +66,7 @@ const throwDashboardCannotProceed = ({ parallel, ciBuildId, group, err }) => {
 
 const throwIfIndeterminateCiBuildId = (ciBuildId, parallel, group) => {
   if ((!ciBuildId && !ciProvider.provider()) && (parallel || group)) {
-    errors.throw(
+    errors.throwErr(
       'INDETERMINATE_CI_BUILD_ID',
       {
         group,
@@ -84,13 +77,14 @@ const throwIfIndeterminateCiBuildId = (ciBuildId, parallel, group) => {
   }
 }
 
-const throwIfRecordParamsWithoutRecording = (record, ciBuildId, parallel, group, tag) => {
-  if (!record && _.some([ciBuildId, parallel, group, tag])) {
-    errors.throw('RECORD_PARAMS_WITHOUT_RECORDING', {
+const throwIfRecordParamsWithoutRecording = (record, ciBuildId, parallel, group, tag, autoCancelAfterFailures) => {
+  if (!record && _.some([ciBuildId, parallel, group, tag, autoCancelAfterFailures !== undefined])) {
+    errors.throwErr('RECORD_PARAMS_WITHOUT_RECORDING', {
       ciBuildId,
       tag,
       group,
       parallel,
+      autoCancelAfterFailures,
     })
   }
 }
@@ -99,13 +93,13 @@ const throwIfIncorrectCiBuildIdUsage = (ciBuildId, parallel, group) => {
   // we've been given an explicit ciBuildId
   // but no parallel or group flag
   if (ciBuildId && (!parallel && !group)) {
-    errors.throw('INCORRECT_CI_BUILD_ID_USAGE', { ciBuildId })
+    errors.throwErr('INCORRECT_CI_BUILD_ID_USAGE', { ciBuildId })
   }
 }
 
 const throwIfNoProjectId = (projectId, configFile) => {
   if (!projectId) {
-    errors.throw('CANNOT_RECORD_NO_PROJECT_ID', configFile)
+    errors.throwErr('CANNOT_RECORD_NO_PROJECT_ID', configFile)
   }
 }
 
@@ -172,9 +166,9 @@ const uploadArtifacts = (options = {}) => {
   return Promise
   .all(uploads)
   .catch((err) => {
-    errors.warning('DASHBOARD_CANNOT_UPLOAD_RESULTS', err)
+    errors.warning('CLOUD_CANNOT_UPLOAD_ARTIFACTS', err)
 
-    return logException(err)
+    return exception.create(err)
   })
 }
 
@@ -192,11 +186,11 @@ const updateInstanceStdout = (options = {}) => {
       stack: err.stack,
     })
 
-    errors.warning('DASHBOARD_CANNOT_CREATE_RUN_OR_INSTANCE', err)
+    errors.warning('CLOUD_CANNOT_CREATE_RUN_OR_INSTANCE', err)
 
     // dont log exceptions if we have a 503 status code
     if (err.statusCode !== 503) {
-      return logException(err)
+      return exception.create(err)
     }
   }).finally(capture.restore)
 }
@@ -235,7 +229,7 @@ const postInstanceResults = (options = {}) => {
       stack: err.stack,
     })
 
-    throwDashboardCannotProceed({ parallel, ciBuildId, group, err })
+    throwCloudCannotProceed({ parallel, ciBuildId, group, err })
   })
 }
 
@@ -251,14 +245,6 @@ const getCommitFromGitOrCi = (git) => {
     remoteOrigin: git.remote,
     defaultBranch: null,
   })
-}
-
-const usedTestsMessage = (limit, phrase) => {
-  if (_.isFinite(limit)) {
-    return `The limit is ${chalk.blue(limit)} ${phrase} results.`
-  }
-
-  return ''
 }
 
 const billingLink = (orgId) => {
@@ -281,7 +267,7 @@ const createRun = Promise.method((options = {}) => {
     ciBuildId: null,
   })
 
-  let { projectId, recordKey, platform, git, specPattern, specs, parallel, ciBuildId, group, tags, testingType } = options
+  let { projectRoot, projectId, recordKey, platform, git, specPattern, specs, parallel, ciBuildId, group, tags, testingType, autoCancelAfterFailures } = options
 
   if (recordKey == null) {
     recordKey = env.get('CYPRESS_RECORD_KEY')
@@ -297,11 +283,11 @@ const createRun = Promise.method((options = {}) => {
     }
 
     // else throw
-    errors.throw('RECORD_KEY_MISSING')
+    errors.throwErr('RECORD_KEY_MISSING')
   }
 
   // go back to being a string
-  if (specPattern) {
+  if (Array.isArray(specPattern)) {
     specPattern = specPattern.join(',')
   }
 
@@ -324,6 +310,7 @@ const createRun = Promise.method((options = {}) => {
   debugCiInfo('CI provider information %o', ci)
 
   return api.createRun({
+    projectRoot,
     specs,
     group,
     tags,
@@ -336,6 +323,7 @@ const createRun = Promise.method((options = {}) => {
     testingType,
     ci,
     commit,
+    autoCancelAfterFailures,
   })
   .tap((response) => {
     if (!(response && response.warnings && response.warnings.length)) {
@@ -346,13 +334,15 @@ const createRun = Promise.method((options = {}) => {
       switch (warning.code) {
         case 'FREE_PLAN_IN_GRACE_PERIOD_EXCEEDS_MONTHLY_PRIVATE_TESTS':
           return errors.warning('FREE_PLAN_IN_GRACE_PERIOD_EXCEEDS_MONTHLY_PRIVATE_TESTS', {
-            usedTestsMessage: usedTestsMessage(warning.limit, 'private test'),
+            limit: warning.limit,
+            usedTestsMessage: 'private test',
             gracePeriodMessage: gracePeriodMessage(warning.gracePeriodEnds),
             link: billingLink(warning.orgId),
           })
         case 'FREE_PLAN_IN_GRACE_PERIOD_EXCEEDS_MONTHLY_TESTS':
           return errors.warning('FREE_PLAN_IN_GRACE_PERIOD_EXCEEDS_MONTHLY_TESTS', {
-            usedTestsMessage: usedTestsMessage(warning.limit, 'test'),
+            limit: warning.limit,
+            usedTestsMessage: 'test',
             gracePeriodMessage: gracePeriodMessage(warning.gracePeriodEnds),
             link: billingLink(warning.orgId),
           })
@@ -364,19 +354,22 @@ const createRun = Promise.method((options = {}) => {
         case 'FREE_PLAN_EXCEEDS_MONTHLY_TESTS_V2':
           return errors.warning('PLAN_EXCEEDS_MONTHLY_TESTS', {
             planType: 'free',
-            usedTestsMessage: usedTestsMessage(warning.limit, 'test'),
+            limit: warning.limit,
+            usedTestsMessage: 'test',
             link: billingLink(warning.orgId),
           })
         case 'PAID_PLAN_EXCEEDS_MONTHLY_PRIVATE_TESTS':
           return errors.warning('PLAN_EXCEEDS_MONTHLY_TESTS', {
             planType: 'current',
-            usedTestsMessage: usedTestsMessage(warning.limit, 'private test'),
+            limit: warning.limit,
+            usedTestsMessage: 'private test',
             link: billingLink(warning.orgId),
           })
         case 'PAID_PLAN_EXCEEDS_MONTHLY_TESTS':
           return errors.warning('PLAN_EXCEEDS_MONTHLY_TESTS', {
             planType: 'current',
-            usedTestsMessage: usedTestsMessage(warning.limit, 'test'),
+            limit: warning.limit,
+            usedTestsMessage: 'test',
             link: billingLink(warning.orgId),
           })
         case 'PLAN_IN_GRACE_PERIOD_RUN_GROUPING_FEATURE_USED':
@@ -385,20 +378,19 @@ const createRun = Promise.method((options = {}) => {
             link: billingLink(warning.orgId),
           })
         default:
-          return errors.warning('DASHBOARD_UNKNOWN_CREATE_RUN_WARNING', {
+          return errors.warning('CLOUD_UNKNOWN_CREATE_RUN_WARNING', {
             message: warning.message,
             props: _.omit(warning, 'message'),
           })
       }
     })
   }).catch((err) => {
-    debug('failed creating run with status %d %o', err.statusCode, {
-      stack: err.stack,
-    })
+    debug('failed creating run with status %o',
+      _.pick(err, ['name', 'message', 'statusCode', 'stack']))
 
     switch (err.statusCode) {
       case 401:
-        recordKey = keys.hide(recordKey)
+        recordKey = hideKeys(recordKey)
         if (!recordKey) {
           // make sure the key is defined, otherwise the error
           // printing logic substitutes the default value {}
@@ -406,7 +398,7 @@ const createRun = Promise.method((options = {}) => {
           recordKey = 'undefined'
         }
 
-        return errors.throw('DASHBOARD_RECORD_KEY_NOT_VALID', recordKey, projectId)
+        return errors.throwErr('CLOUD_RECORD_KEY_NOT_VALID', recordKey, projectId)
       case 402: {
         const { code, payload } = err.error
 
@@ -415,25 +407,31 @@ const createRun = Promise.method((options = {}) => {
 
         switch (code) {
           case 'FREE_PLAN_EXCEEDS_MONTHLY_PRIVATE_TESTS':
-            return errors.throw('FREE_PLAN_EXCEEDS_MONTHLY_PRIVATE_TESTS', {
-              usedTestsMessage: usedTestsMessage(limit, 'private test'),
+            return errors.throwErr('FREE_PLAN_EXCEEDS_MONTHLY_PRIVATE_TESTS', {
+              limit,
+              usedTestsMessage: 'private test',
               link: billingLink(orgId),
             })
           case 'FREE_PLAN_EXCEEDS_MONTHLY_TESTS':
-            return errors.throw('FREE_PLAN_EXCEEDS_MONTHLY_TESTS', {
-              usedTestsMessage: usedTestsMessage(limit, 'test'),
+            return errors.throwErr('FREE_PLAN_EXCEEDS_MONTHLY_TESTS', {
+              limit,
+              usedTestsMessage: 'test',
               link: billingLink(orgId),
             })
           case 'PARALLEL_FEATURE_NOT_AVAILABLE_IN_PLAN':
-            return errors.throw('PARALLEL_FEATURE_NOT_AVAILABLE_IN_PLAN', {
+            return errors.throwErr('PARALLEL_FEATURE_NOT_AVAILABLE_IN_PLAN', {
               link: billingLink(orgId),
             })
           case 'RUN_GROUPING_FEATURE_NOT_AVAILABLE_IN_PLAN':
-            return errors.throw('RUN_GROUPING_FEATURE_NOT_AVAILABLE_IN_PLAN', {
+            return errors.throwErr('RUN_GROUPING_FEATURE_NOT_AVAILABLE_IN_PLAN', {
+              link: billingLink(orgId),
+            })
+          case 'AUTO_CANCEL_NOT_AVAILABLE_IN_PLAN':
+            return errors.throwErr('CLOUD_AUTO_CANCEL_NOT_AVAILABLE_IN_PLAN', {
               link: billingLink(orgId),
             })
           default:
-            return errors.throw('DASHBOARD_UNKNOWN_INVALID_REQUEST', {
+            return errors.throwErr('CLOUD_UNKNOWN_INVALID_REQUEST', {
               response: err,
               flags: {
                 group,
@@ -445,9 +443,9 @@ const createRun = Promise.method((options = {}) => {
         }
       }
       case 404:
-        return errors.throw('DASHBOARD_PROJECT_NOT_FOUND', projectId, settings.configFile(options))
+        return errors.throwErr('CLOUD_PROJECT_NOT_FOUND', projectId, path.basename(options.configFile))
       case 412:
-        return errors.throw('DASHBOARD_INVALID_RUN_REQUEST', err.error)
+        return errors.throwErr('CLOUD_INVALID_RUN_REQUEST', err.error)
       case 422: {
         const { code, payload } = err.error
 
@@ -455,7 +453,7 @@ const createRun = Promise.method((options = {}) => {
 
         switch (code) {
           case 'RUN_GROUP_NAME_NOT_UNIQUE':
-            return errors.throw('DASHBOARD_RUN_GROUP_NAME_NOT_UNIQUE', {
+            return errors.throwErr('CLOUD_RUN_GROUP_NAME_NOT_UNIQUE', {
               group,
               runUrl,
               ciBuildId,
@@ -463,7 +461,7 @@ const createRun = Promise.method((options = {}) => {
           case 'PARALLEL_GROUP_PARAMS_MISMATCH': {
             const { browserName, browserVersion, osName, osVersion } = platform
 
-            return errors.throw('DASHBOARD_PARALLEL_GROUP_PARAMS_MISMATCH', {
+            return errors.throwErr('CLOUD_PARALLEL_GROUP_PARAMS_MISMATCH', {
               group,
               runUrl,
               ciBuildId,
@@ -474,24 +472,25 @@ const createRun = Promise.method((options = {}) => {
                 browserVersion,
                 specs,
               },
+              payload,
             })
           }
           case 'PARALLEL_DISALLOWED':
-            return errors.throw('DASHBOARD_PARALLEL_DISALLOWED', {
+            return errors.throwErr('CLOUD_PARALLEL_DISALLOWED', {
               tags,
               group,
               runUrl,
               ciBuildId,
             })
           case 'PARALLEL_REQUIRED':
-            return errors.throw('DASHBOARD_PARALLEL_REQUIRED', {
+            return errors.throwErr('CLOUD_PARALLEL_REQUIRED', {
               tags,
               group,
               runUrl,
               ciBuildId,
             })
           case 'ALREADY_COMPLETE':
-            return errors.throw('DASHBOARD_ALREADY_COMPLETE', {
+            return errors.throwErr('CLOUD_ALREADY_COMPLETE', {
               runUrl,
               tags,
               group,
@@ -499,15 +498,24 @@ const createRun = Promise.method((options = {}) => {
               ciBuildId,
             })
           case 'STALE_RUN':
-            return errors.throw('DASHBOARD_STALE_RUN', {
+            return errors.throwErr('CLOUD_STALE_RUN', {
               runUrl,
               tags,
               group,
               parallel,
               ciBuildId,
             })
+          case 'AUTO_CANCEL_MISMATCH':
+            return errors.throwErr('CLOUD_AUTO_CANCEL_MISMATCH', {
+              runUrl,
+              tags,
+              group,
+              parallel,
+              ciBuildId,
+              autoCancelAfterFailures,
+            })
           default:
-            return errors.throw('DASHBOARD_UNKNOWN_INVALID_REQUEST', {
+            return errors.throwErr('CLOUD_UNKNOWN_INVALID_REQUEST', {
               response: err,
               flags: {
                 tags,
@@ -519,7 +527,7 @@ const createRun = Promise.method((options = {}) => {
         }
       }
       default:
-        throwDashboardCannotProceed({ parallel, ciBuildId, group, err })
+        throwCloudCannotProceed({ parallel, ciBuildId, group, err })
     }
   })
 })
@@ -536,13 +544,12 @@ const createInstance = (options = {}) => {
     platform,
     machineId,
   })
-
   .catch((err) => {
     debug('failed creating instance %o', {
       stack: err.stack,
     })
 
-    throwDashboardCannotProceed({
+    throwCloudCannotProceed({
       err,
       group,
       ciBuildId,
@@ -569,7 +576,7 @@ const _postInstanceTests = ({
     hooks,
   })
   .catch((err) => {
-    throwDashboardCannotProceed({ parallel, ciBuildId, group, err })
+    throwCloudCannotProceed({ parallel, ciBuildId, group, err })
   })
 }
 
@@ -589,6 +596,7 @@ const createRunAndRecordSpecs = (options = {}) => {
     onError,
     testingType,
     quiet,
+    autoCancelAfterFailures,
   } = options
   const recordKey = options.key
 
@@ -610,6 +618,7 @@ const createRunAndRecordSpecs = (options = {}) => {
     }
 
     return createRun({
+      projectRoot,
       git,
       specs,
       group,
@@ -621,6 +630,8 @@ const createRunAndRecordSpecs = (options = {}) => {
       projectId,
       specPattern,
       testingType,
+      configFile: config ? config.configFile : null,
+      autoCancelAfterFailures,
     })
     .then((resp) => {
       if (!resp) {
@@ -667,7 +678,7 @@ const createRunAndRecordSpecs = (options = {}) => {
       }
 
       const afterSpecRun = (spec, results, config) => {
-        // dont do anything if we failed to
+        // don't do anything if we failed to
         // create the instance
         if (!instanceId || results.skippedSpec) {
           return
@@ -679,7 +690,7 @@ const createRunAndRecordSpecs = (options = {}) => {
           // eslint-disable-next-line no-console
           console.log('')
 
-          terminal.header('Uploading Results', {
+          terminal.header('Uploading Screenshots & Videos', {
             color: ['blue'],
           })
 
@@ -743,15 +754,18 @@ const createRunAndRecordSpecs = (options = {}) => {
         const tests = _.chain(r[0])
         .uniqBy('id')
         .map((v) => {
-          if (v.originalTitle) {
-            v._titlePath.splice(-1, 1, v.originalTitle)
-          }
-
           return _.pick({
             ...v,
             clientId: v.id,
             config: v._testConfig?.unverifiedTestConfig || null,
-            title: v._titlePath,
+            title: v._titlePath.map((title) => {
+              // sanitize the title which may have been altered by a suite-/test-level
+              // browser skip to ensure the original title is used so the test recorded
+              // to the cloud is correct registered as a pending test
+              const BROWSER_SKIP_TITLE = ' (skipped due to browser)'
+
+              return title.replace(BROWSER_SKIP_TITLE, '')
+            }),
             hookIds: v.hooks.map((hook) => hook.hookId),
           },
           'clientId', 'body', 'title', 'config', 'hookIds')
@@ -792,12 +806,14 @@ const createRunAndRecordSpecs = (options = {}) => {
         })
 
         if (response === responseDidFail) {
+          debug('`responseDidFail` equals `response`, allowing browser to hang until it is killed: Response %o', { responseDidFail })
+
           // dont call the cb, let the browser hang until it's killed
           return
         }
 
         if (_.some(response.actions, { type: 'SPEC', action: 'SKIP' })) {
-          errors.warning('DASHBOARD_CANCEL_SKIPPED_SPEC')
+          errors.warning('CLOUD_CANCEL_SKIPPED_SPEC')
 
           // set a property on the response so the browser runner
           // knows not to start executing tests

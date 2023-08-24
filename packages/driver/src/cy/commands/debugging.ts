@@ -1,7 +1,4 @@
-// @ts-nocheck
-
 import _ from 'lodash'
-
 import $utils from '../../cypress/utils'
 
 const resume = (state, resumeAll = true) => {
@@ -20,18 +17,18 @@ const resume = (state, resumeAll = true) => {
   return onResume(resumeAll)
 }
 
-const getNextQueuedCommand = (state, queue) => {
+const getNextQueuedCommand = (queue) => {
   const search = (i) => {
     const cmd = queue.at(i)
 
-    if (cmd && cmd.get('skip')) {
+    if (cmd && cmd.state === 'skipped') {
       return search(i + 1)
     }
 
     return cmd
   }
 
-  return search(state('index'))
+  return search(queue.index)
 }
 
 export default (Commands, Cypress, cy, state, config) => {
@@ -43,51 +40,50 @@ export default (Commands, Cypress, cy, state, config) => {
     return resume(state)
   })
 
-  Commands.addAll({ type: 'utility', prevSubject: 'optional' }, {
-    // pause should indefinitely pause until the user
-    // presses a key or clicks in the UI to continue
-    pause (subject, options = {}) {
-      // bail if we're in run mode, unless --headed and --no-exit flags are passed
-      if (!config('isInteractive') && (!config('browser').isHeaded || config('exit'))) {
-        return subject
-      }
+  // pause should indefinitely pause until the user
+  // presses a key or clicks in the UI to continue
+  Commands.addQuery('pause', function pause (options: Partial<Cypress.Loggable> = {}) {
+    if (!config('isInteractive') && (!config('browser').isHeaded || config('exit'))) {
+      return _.identity
+    }
 
-      const userOptions = options
+    const log = options.log !== false && Cypress.log({
+      snapshot: true,
+      autoEnd: false,
+      timeout: 0,
+    })
 
-      options = _.defaults({}, userOptions, { log: true })
+    let hasPaused = false
 
-      if (options.log) {
-        options._log = Cypress.log({
-          snapshot: true,
-          autoEnd: false,
-          timeout: 0,
-        })
-      }
-
-      const onResume = (fn, timeout) => {
-        return state('onResume', (resumeAll) => {
-          if (resumeAll) {
+    const onResume = (fn, timeout) => {
+      return state('onResume', (resumeAll) => {
+        if (resumeAll) {
           // nuke onPause only if
           // we've been told to resume
           // all the commands, else
           // pause on the very next one
-            state('onPaused', null)
+          state('onPaused', null)
 
-            if (options.log) {
-              options._log.end()
-            }
-          }
+          log && log.end()
+        }
 
-          // restore timeout
-          cy.timeout(timeout)
+        // restore timeout
+        cy.timeout(timeout)
 
-          // invoke callback fn
-          return fn()
-        })
+        // invoke callback fn
+        return fn()
+      })
+    }
+
+    return (subject) => {
+      if (hasPaused) {
+        return subject
       }
 
+      hasPaused = true
+
       state('onPaused', (fn) => {
-        const next = getNextQueuedCommand(state, cy.queue)
+        const next = getNextQueuedCommand(cy.queue)
 
         // backup the current timeout
         const timeout = cy.timeout()
@@ -102,37 +98,36 @@ export default (Commands, Cypress, cy, state, config) => {
       })
 
       return subject
-    },
+    }
+  })
 
-    debug (subject, options = {}) {
-      const userOptions = options
+  Commands.addQuery('debug', function debug (options: Partial<Cypress.Loggable> = {}) {
+    options.log !== false && Cypress.log({
+      snapshot: true,
+      end: true,
+      timeout: 0,
+    })
 
-      options = _.defaults({}, userOptions, {
-        log: true,
-      })
+    let hasPaused = false
 
-      if (options.log) {
-        options._log = Cypress.log({
-          snapshot: true,
-          end: true,
-          timeout: 0,
-        })
+    return (subject) => {
+      if (!hasPaused) {
+        hasPaused = true
+        const previous = this.get('prev')
+
+        $utils.log('\n%c------------------------ Debug Info ------------------------', 'font-weight: bold;')
+        $utils.log('Command Name:    ', previous && previous.get('name'))
+        $utils.log('Command Args:    ', previous && previous.get('args'))
+        $utils.log('Current Subject: ', subject)
+
+        ////// HOVER OVER TO INSPECT THE CURRENT SUBJECT //////
+        subject
+        ///////////////////////////////////////////////////////
+
+        debugger // eslint-disable-line no-debugger
       }
 
-      const previous = state('current').get('prev')
-
-      $utils.log('\n%c------------------------ Debug Info ------------------------', 'font-weight: bold;')
-      $utils.log('Command Name:    ', previous && previous.get('name'))
-      $utils.log('Command Args:    ', previous && previous.get('args'))
-      $utils.log('Current Subject: ', subject)
-
-      ////// HOVER OVER TO INSPECT THE CURRENT SUBJECT //////
-      subject
-      ///////////////////////////////////////////////////////
-
-      debugger // eslint-disable-line no-debugger
-
       return subject
-    },
+    }
   })
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import _ from 'lodash'
 import Promise from 'bluebird'
 
@@ -9,19 +8,33 @@ import $utils from '../../../cypress/utils'
 import $errUtils from '../../../cypress/error_utils'
 import $actionability from '../../actionability'
 import $Keyboard from '../../../cy/keyboard'
+import type { Log } from '../../../cypress/log'
+
 import debugFn from 'debug'
 const debug = debugFn('cypress:driver:command:type')
+
+interface InternalTypeOptions extends Partial<Cypress.TypeOptions> {
+  _log?: Log
+  $el: JQuery
+  ensure?: object
+  verify: boolean
+  interval?: number
+}
+
+interface InternalClearOptions extends Partial<Cypress.ClearOptions> {
+  _log?: Log
+  ensure?: object
+}
 
 export default function (Commands, Cypress, cy, state, config) {
   const { keyboard } = cy.devices
 
-  function type (subject, chars, options = {}) {
-    const userOptions = options
+  function type (subject, chars, userOptions: Partial<Cypress.TypeOptions> = {}) {
     let updateTable
 
     // allow the el we're typing into to be
     // changed by options -- used by cy.clear()
-    options = _.defaults({}, userOptions, {
+    const options: InternalTypeOptions = _.defaults({}, userOptions, {
       $el: subject,
       log: true,
       verify: true,
@@ -74,14 +87,8 @@ export default function (Commands, Cypress, cy, state, config) {
         }
       }
 
-      // transform table object into object with zero based index as keys
       const getTableData = () => {
-        return _.reduce(_.values(table), (memo, value, index) => {
-          memo[index + 1] = value
-
-          return memo
-        }
-        , {})
+        return _.values(table)
       }
 
       options._log = Cypress.log({
@@ -107,7 +114,7 @@ export default function (Commands, Cypress, cy, state, config) {
         },
       })
 
-      options._log.snapshot('before', { next: 'after' })
+      options._log!.snapshot('before', { next: 'after' })
     }
 
     if (options.$el.length > 1) {
@@ -160,7 +167,15 @@ export default function (Commands, Cypress, cy, state, config) {
     const win = state('window')
 
     const getDefaultButtons = (form) => {
-      return form.find('input, button').filter((__, el) => {
+      const formId = CSS.escape(form.attr('id'))
+      const nestedButtons = form.find('input, button')
+
+      const possibleDefaultButtons: JQuery<any> = formId ? $dom.wrap(_.uniq([
+        ...nestedButtons,
+        ...$dom.query('body', form.prop('ownerDocument')).find(`input[form="${formId}"], button[form="${formId}"]`),
+      ])) : nestedButtons
+
+      return possibleDefaultButtons.filter((__, el) => {
         const $el = $dom.wrap(el)
 
         return (
@@ -171,6 +186,8 @@ export default function (Commands, Cypress, cy, state, config) {
     }
 
     const type = function () {
+      const isFirefoxBefore98 = Cypress.isBrowser('firefox') && Cypress.browserMajorVersion() < 98
+
       const simulateSubmitHandler = function () {
         const form = options.$el.parents('form')
 
@@ -228,11 +245,14 @@ export default function (Commands, Cypress, cy, state, config) {
           return
         }
 
-        // In Firefox, submit event is automatically fired
+        // Before Firefox 98, submit event is automatically fired
         // when we send {Enter} KeyboardEvent to the input fields.
         // Because of that, we don't have to click the submit buttons.
         // Otherwise, we trigger submit events twice.
-        if (!Cypress.isBrowser('firefox')) {
+        //
+        // WebKit will send the submit with an Enter keypress event,
+        // so we do need to click the default button in this case.
+        if (!isFirefoxBefore98 && !Cypress.isBrowser('webkit')) {
           // issue the click event to the 'default button' of the form
           // we need this to be synchronous so not going through our
           // own click command
@@ -271,6 +291,15 @@ export default function (Commands, Cypress, cy, state, config) {
 
       const isContentEditable = $elements.isContentEditable(options.$el.get(0))
       const isTextarea = $elements.isTextarea(options.$el.get(0))
+
+      const fireClickEvent = (el) => {
+        const ctor = $dom.getDocumentFromElement(el).defaultView!.PointerEvent
+        const event = new ctor('click', { composed: true })
+
+        el.dispatchEvent(event)
+      }
+
+      let keydownEvents: any[] = []
 
       return keyboard.type({
         $el: options.$el,
@@ -312,7 +341,54 @@ export default function (Commands, Cypress, cy, state, config) {
           }
         },
 
-        onEvent: updateTable || _.noop,
+        onEvent (id, key, event, value) {
+          if (updateTable) {
+            updateTable(id, key, event, value)
+          }
+
+          if (event.type === 'keydown') {
+            keydownEvents.push(event.target)
+          }
+
+          if (
+            (
+              // Before Firefox 98,
+              // Firefox sends a click event when the Space key is pressed.
+              // We don't want to send it twice.
+              !Cypress.isBrowser('firefox') ||
+              // After Firefox 98,
+              // it sends a click event automatically if the element is a <button>,
+              // but it does not if the element is an <input>.
+              // event.target is null when used with shadow DOM.
+              (!isFirefoxBefore98 && event.target && $elements.isInput(event.target))
+            ) &&
+            // Click event is sent after keyup event with space key.
+            event.type === 'keyup' && event.code === 'Space' &&
+            // When event is prevented, the click event should not be emitted
+            !event.defaultPrevented &&
+            // Click events should be only sent to button-like elements.
+            // event.target is null when used with shadow DOM.
+            (event.target && $elements.isButtonLike(event.target)) &&
+            // When a space key is pressed for input radio elements, the click event is only fired when it's not checked.
+            !(event.target.tagName === 'INPUT' && event.target.type === 'radio' && event.target.checked === true) &&
+            // When a space key is pressed on another element, the click event should not be fired.
+            keydownEvents.includes(event.target)
+          ) {
+            fireClickEvent(event.target)
+
+            keydownEvents = []
+
+            // After Firefox 98,
+            // Firefox doesn't update checkbox automatically even if the click event is sent.
+            if (Cypress.isBrowser('firefox')) {
+              if (event.target.type === 'checkbox') {
+                event.target.checked = !event.target.checked
+              } else if (event.target.type === 'radio') { // when checked is false, here cannot be reached because of the above condition
+                event.target.checked = true
+              }
+            }
+          }
+        },
 
         // fires only when the 'value'
         // of input/text/contenteditable
@@ -347,13 +423,31 @@ export default function (Commands, Cypress, cy, state, config) {
           })
         },
 
-        onEnterPressed (id) {
+        onEnterPressed (el) {
           // dont dispatch change events or handle
           // submit event if we've pressed enter into
           // a textarea or contenteditable
-
           if (isTextarea || isContentEditable) {
             return
+          }
+
+          // click event is only fired on button, image, submit, reset elements.
+          // That's why we cannot use $elements.isButtonLike() here.
+          const type = (type) => $elements.isInputType(el, type)
+          const sendClickEvent = type('button') || type('image') || type('submit') || type('reset')
+
+          // https://github.com/cypress-io/cypress/issues/19541
+          // Send click event on type('{enter}')
+          if (sendClickEvent) {
+            if (
+              // Before Firefox 98, it sends a click event automatically.
+              !Cypress.isBrowser('firefox') ||
+              // After Firefox 98,
+              // it sends a click event automatically if the element is a <button>
+              // it does not if the element is an <input>
+              (!isFirefoxBefore98 && $elements.isInput(el))) {
+              fireClickEvent(el)
+            }
           }
 
           // if our value has changed since our
@@ -362,7 +456,7 @@ export default function (Commands, Cypress, cy, state, config) {
           const changeEvent = state('changeEvent')
 
           if (changeEvent) {
-            changeEvent(id)
+            changeEvent()
           }
 
           // handle submit event handler here
@@ -381,6 +475,8 @@ export default function (Commands, Cypress, cy, state, config) {
         },
       })
     }
+
+    const subjectChain = cy.subjectChain()
 
     const handleFocused = function () {
       // if it's the body, don't need to worry about focus
@@ -415,6 +511,8 @@ export default function (Commands, Cypress, cy, state, config) {
       }
 
       return $actionability.verify(cy, options.$el, config, options, {
+        subjectFn: () => cy.getSubjectFromChain(subjectChain),
+
         onScroll ($el, type) {
           return Cypress.action('cy:scrolled', $el, type)
         },
@@ -433,7 +531,6 @@ export default function (Commands, Cypress, cy, state, config) {
           // cannot just call .focus, since children of contenteditable will not receive cursor
           // with .focus()
           return cy.now('click', $elToClick, {
-            $el: $elToClick,
             log: false,
             verify: false,
             _log: options._log,
@@ -442,6 +539,7 @@ export default function (Commands, Cypress, cy, state, config) {
             interval: options.interval,
             errorOnSelect: false,
             scrollBehavior: options.scrollBehavior,
+            subjectFn: () => $elToClick,
           })
           .then(() => {
             let activeElement = $elements.getActiveElByDocument($elToClick)
@@ -494,10 +592,8 @@ export default function (Commands, Cypress, cy, state, config) {
     })
   }
 
-  function clear (subject, options = {}) {
-    const userOptions = options
-
-    options = _.defaults({}, userOptions, {
+  function clear (subject, userOptions: Partial<Cypress.ClearOptions> = {}) {
+    const options: InternalClearOptions = _.defaults({}, userOptions, {
       log: true,
       force: false,
       waitForAnimations: config('waitForAnimations'),

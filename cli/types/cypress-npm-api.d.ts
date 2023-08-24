@@ -36,8 +36,8 @@ declare namespace CypressCommandLine {
    */
   interface CypressRunOptions extends CypressCommonOptions {
     /**
-     * Specify different browser to run tests in, either by name or by filesystem path
-    */
+     * Specify browser to run tests in, either by name or by filesystem path
+     */
     browser: string
     /**
      * Specify a unique identifier for a run to enable grouping or parallelization
@@ -60,7 +60,7 @@ declare namespace CypressCommandLine {
      */
     headless: boolean
     /**
-     * Specify your secret record key
+     * Specify your secret Record Key
      */
     key: string
     /**
@@ -92,13 +92,13 @@ declare namespace CypressCommandLine {
      */
     reporterOptions: any
     /**
-     * Slow test threshold in milliseconds. Only affects the visual output of some reporters. For example, the spec reporter will display the test time in yellow if over the threshold.
-     */
-    slowTestThreshold: number
-    /**
      * Specify the specs to run
      */
     spec: string
+    /**
+     * Specify the number of failures to cancel a run being recorded to the Cloud or false to disable auto-cancellation.
+     */
+    autoCancelAfterFailures: number | false
   }
 
   /**
@@ -118,7 +118,7 @@ declare namespace CypressCommandLine {
    */
   interface CypressOpenOptions extends CypressCommonOptions {
     /**
-     * Specify a filesystem path to a custom browser
+     * Specify browser to run tests in, either by name or by filesystem path
      */
     browser: string
     /**
@@ -146,11 +146,9 @@ declare namespace CypressCommandLine {
     /**
      * Path to the config file to be used.
      *
-     * If `false` is passed, no config file will be used.
-     *
-     * @default "cypress.json"
+     * @default "cypress.config.{js,ts,mjs,cjs}"
      */
-    configFile: string | false
+    configFile: string
     /**
      * Specify environment variables.
      * TODO: isn't this duplicate of config.env?!
@@ -179,7 +177,7 @@ declare namespace CypressCommandLine {
     title: string[]
     state: string
     body: string
-     /**
+    /**
      * Error string as it's presented in console if the test fails
      */
     displayError: string | null
@@ -189,8 +187,8 @@ declare namespace CypressCommandLine {
   interface AttemptResult {
     state: string
     error: TestError | null
-    startedAt: dateTimeISO
-    duration: ms
+    wallClockStartedAt: dateTimeISO
+    wallClockDuration: ms
     videoTimestamp: ms
     screenshots: ScreenshotInformation[]
   }
@@ -235,6 +233,7 @@ declare namespace CypressCommandLine {
       startedAt: dateTimeISO
       endedAt: dateTimeISO
       duration: ms
+      wallClockDuration?: number
     }
     /**
      * Reporter name like "spec"
@@ -265,8 +264,10 @@ declare namespace CypressCommandLine {
        * resolved filename of the spec
        */
       absolute: string
+      relativeToCommonRoot: string
     }
     shouldUploadVideo: boolean
+    skippedSpec: boolean
   }
 
   /**
@@ -395,7 +396,22 @@ declare module 'cypress' {
      * @param {Cypress.ConfigOptions} config
      * @returns {Cypress.ConfigOptions} the configuration passed in parameter
      */
-    defineConfig(config: Cypress.ConfigOptions): Cypress.ConfigOptions
+    defineConfig<ComponentDevServerOpts = any>(config: Cypress.ConfigOptions<ComponentDevServerOpts>): Cypress.ConfigOptions
+
+    /**
+     * Provides automatic code completion for Component Frameworks Definitions.
+     * While it's not strictly necessary for Cypress to parse your configuration, we
+     * recommend wrapping your Component Framework Definition object with `defineComponentFramework()`
+     * @example
+     * module.exports = defineComponentFramework({
+     *   type: 'cypress-ct-solid-js'
+     * })
+     *
+     * @see ../types/cypress-npm-api.d.ts
+     * @param {Cypress.ThirdPartyComponentFrameworkDefinition} config
+     * @returns {Cypress.ThirdPartyComponentFrameworkDefinition} the configuration passed in parameter
+     */
+    defineComponentFramework(config: Cypress.ThirdPartyComponentFrameworkDefinition): Cypress.ThirdPartyComponentFrameworkDefinition
   }
 
   // export Cypress NPM module interface

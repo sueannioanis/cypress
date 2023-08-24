@@ -2,34 +2,38 @@ import $ from 'jquery'
 
 import $dom from '../dom'
 import $utils from '../cypress/utils'
+import type { StateFunc } from '../cypress/state'
 
 const remoteJQueryisNotSameAsGlobal = (remoteJQuery) => {
   return remoteJQuery && (remoteJQuery !== $)
 }
 
-export default {
-  create (state) {
-    const jquery = () => {
-      return state('jQuery') || state('window').$
+// eslint-disable-next-line @cypress/dev/arrow-body-multiline-braces
+export const create = (state: StateFunc) => ({
+  $$ (selector, context?) {
+    if (context == null) {
+      context = state('document')
     }
 
-    return {
-      getRemotejQueryInstance (subject) {
-        // we make assumptions that you cannot have
-        // an array of mixed types, so we only look at
-        // the first item (if there's an array)
-        const firstSubject = $utils.unwrapFirst(subject)
+    return $dom.query(selector, context)
+  },
 
-        if (!$dom.isElement(firstSubject)) return
+  getRemotejQueryInstance (subject) {
+    // we make assumptions that you cannot have
+    // an array of mixed types, so we only look at
+    // the first item (if there's an array)
+    const firstSubject = $utils.unwrapFirst(subject)
 
-        const remoteJQuery = jquery()
+    if (!$dom.isElement(firstSubject)) return
 
-        if (remoteJQueryisNotSameAsGlobal(remoteJQuery)) {
-          const remoteSubject = remoteJQuery(subject)
+    const remoteJQuery = state('jQuery') || state('window').$
 
-          return remoteSubject
-        }
-      },
+    if (remoteJQueryisNotSameAsGlobal(remoteJQuery)) {
+      const remoteSubject = remoteJQuery(subject)
+
+      return remoteSubject
     }
   },
-}
+})
+
+export interface IJQuery extends ReturnType<typeof create> {}

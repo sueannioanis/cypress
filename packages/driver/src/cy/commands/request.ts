@@ -28,6 +28,7 @@ const REQUEST_DEFAULTS = {
   timeout: null,
   followRedirect: true,
   failOnStatusCode: true,
+  retryIntervals: [0, 100, 200, 200],
   retryOnNetworkFailure: true,
   retryOnStatusCodeFailure: false,
 }
@@ -50,6 +51,14 @@ const whichAreOptional = (val, key) => {
   return (val === null) && OPTIONAL_OPTS.includes(key)
 }
 
+const getDisplayUrl = (url: string) => {
+  if (url.startsWith(window.location.origin)) {
+    return url.slice(window.location.origin.length)
+  }
+
+  return url
+}
+
 const needsFormSpecified = (options: any = {}) => {
   const { body, json, headers } = options
 
@@ -66,7 +75,7 @@ interface BackendError {
 
 export default (Commands, Cypress, cy, state, config) => {
   Commands.addAll({
-    // allow our signature to be similar to cy.route
+    // allow our signature to be similar to cy.intercept
     // METHOD / URL / BODY
     // or object literal with all expanded options
     request (...args) {
@@ -135,10 +144,22 @@ export default (Commands, Cypress, cy, state, config) => {
       // origin may return an empty string if we haven't visited anything yet
       options.url = $Location.normalize(options.url)
 
-      const originOrBase = config('baseUrl') || cy.getRemoteLocation('origin')
+      // If passed a relative url, determine the fully qualified URL to use.
+      // In the multi-origin version of the driver, we use originCommandBaseUrl,
+      // which is set to the origin that is associated with it.
+      // In the primary driver (where originCommandBaseUrl is undefined), we
+      // use the baseUrl or remote origin.
+      const originOrBase = Cypress.state('originCommandBaseUrl') || config('baseUrl') || cy.getRemoteLocation('origin')
 
       if (originOrBase) {
         options.url = $Location.qualifyWithBaseUrl(originOrBase, options.url)
+      }
+
+      // https://github.com/cypress-io/cypress/issues/19407
+      // Make generated querystring consistent with `URLSearchParams` class and cy.visit()
+      if (options.qs) {
+        options.url = $Location.mergeUrlWithParams(options.url, options.qs)
+        options.qs = null
       }
 
       // Make sure the url unicode characters are properly escaped
@@ -156,6 +177,7 @@ export default (Commands, Cypress, cy, state, config) => {
         $errUtils.throwErrByPath('request.url_invalid', {
           args: {
             configFile: Cypress.config('configFile'),
+            projectRoot: Cypress.config('projectRoot'),
           },
         })
       }
@@ -167,6 +189,7 @@ export default (Commands, Cypress, cy, state, config) => {
         $errUtils.throwErrByPath('request.url_invalid', {
           args: {
             configFile: Cypress.config('configFile'),
+            projectRoot: Cypress.config('projectRoot'),
           },
         })
       }
@@ -272,7 +295,7 @@ export default (Commands, Cypress, cy, state, config) => {
             }
 
             return {
-              message: `${options.method} ${status} ${options.url}`,
+              message: `${options.method} ${status} ${getDisplayUrl(options.url)}`,
               indicator,
             }
           },

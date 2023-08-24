@@ -1,8 +1,11 @@
+const get = require('lodash/get')
 const map = require('lodash/map')
 const pick = require('lodash/pick')
 const once = require('lodash/once')
 const Promise = require('bluebird')
 const browser = require('webextension-polyfill')
+const { cookieMatches } = require('@packages/server/lib/automation/util')
+
 const client = require('./client')
 const util = require('../lib/util')
 
@@ -16,6 +19,16 @@ const httpRe = /^http/
 // normalize into null when empty array
 const firstOrNull = (cookies) => {
   return cookies[0] != null ? cookies[0] : null
+}
+
+const checkIfFirefox = async () => {
+  if (!browser || !get(browser, 'runtime.getBrowserInfo')) {
+    return false
+  }
+
+  const { name } = await browser.runtime.getBrowserInfo()
+
+  return name === 'Firefox'
 }
 
 const connect = function (host, path, extraOpts) {
@@ -44,6 +57,30 @@ const connect = function (host, path, extraOpts) {
         id: `${downloadDelta.id}`,
       })
     })
+  })
+
+  const listenToOnBeforeHeaders = once(() => {
+    // adds a header to the request to mark it as a request for the AUT frame
+    // itself, so the proxy can utilize that for injection purposes
+    browser.webRequest.onBeforeSendHeaders.addListener((details) => {
+      if (
+        // parentFrameId: 0 means the parent is the top-level, so if it isn't
+        // 0, it's nested inside the AUT and can't be the AUT itself
+        details.parentFrameId !== 0
+        // is the spec frame, not the AUT
+        || details.url.includes('__cypress')
+      ) return
+
+      return {
+        requestHeaders: [
+          ...details.requestHeaders,
+          {
+            name: 'X-Cypress-Is-AUT-Frame',
+            value: 'true',
+          },
+        ],
+      }
+    }, { urls: ['<all_urls>'], types: ['sub_frame'] }, ['blocking', 'requestHeaders'])
   })
 
   const fail = (id, err) => {
@@ -77,6 +114,7 @@ const connect = function (host, path, extraOpts) {
       case 'set:cookie':
         return invoke('setCookie', id, data)
       case 'set:cookies':
+      case 'add:cookies':
         return invoke('setCookies', id, data)
       case 'clear:cookies':
         return invoke('clearCookies', id, data)
@@ -88,16 +126,28 @@ const connect = function (host, path, extraOpts) {
         return invoke('focus', id)
       case 'take:screenshot':
         return invoke('takeScreenshot', id)
+      case 'reset:browser:state':
+        return invoke('resetBrowserState', id)
+      case 'reset:browser:tabs:for:next:test':
+        return invoke('resetBrowserTabsForNextTest', id)
       default:
         return fail(id, { message: `No handler registered for: '${msg}'` })
     }
   })
 
-  ws.on('connect', () => {
-    listenToCookieChanges()
-    listenToDownloads()
+  ws.on('automation:config', async (config) => {
+    const isFirefox = await checkIfFirefox()
 
-    return ws.emit('automation:client:connected')
+    listenToCookieChanges()
+    // Non-Firefox browsers use CDP for these instead
+    if (isFirefox) {
+      listenToDownloads()
+      listenToOnBeforeHeaders()
+    }
+  })
+
+  ws.on('connect', () => {
+    ws.emit('automation:client:connected')
   })
 
   return ws
@@ -110,6 +160,8 @@ const setOneCookie = (props) => {
   }
 
   if (props.hostOnly) {
+    // If the hostOnly prop is available, delete the domain.
+    // This will wind up setting a hostOnly cookie based on the calculated cookieURL above.
     delete props.domain
   }
 
@@ -153,8 +205,17 @@ const automation = {
   getAll (filter = {}) {
     filter = pick(filter, GET_ALL_PROPS)
 
+    // Firefox's filtering doesn't match the behavior we want, so we do it
+    // ourselves. for example, getting { domain: example.com } cookies will
+    // return cookies for example.com and all subdomains, whereas we want an
+    // exact match for only "example.com".
     return Promise.try(() => {
-      return browser.cookies.getAll(filter)
+      return browser.cookies.getAll({ url: filter.url })
+      .then((cookies) => {
+        return cookies.filter((cookie) => {
+          return cookieMatches(cookie, filter)
+        })
+      })
     })
   },
 
@@ -180,9 +241,12 @@ const automation = {
   },
 
   clearCookie (filter, fn) {
-    return this.getAll(filter)
-    .then(clearAllCookies)
-    .then(firstOrNull)
+    return this.getCookie(filter)
+    .then((cookie) => {
+      if (!cookie) return null
+
+      return clearOneCookie(cookie)
+    })
     .then(fn)
   },
 
@@ -205,6 +269,23 @@ const automation = {
     }).then(fn)
   },
 
+  resetBrowserState (fn) {
+    // We remove browser data. Firefox goes through this path, while chrome goes through cdp automation
+    // Note that firefox does not support fileSystems or serverBoundCertificates
+    // (https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/browsingData/DataTypeSet).
+    return browser.browsingData.remove({}, { cache: true, cookies: true, downloads: true, formData: true, history: true, indexedDB: true, localStorage: true, passwords: true, pluginData: true, serviceWorkers: true }).then(fn)
+  },
+
+  resetBrowserTabsForNextTest (fn) {
+    return Promise.try(() => {
+      return browser.tabs.create({ url: 'about:blank' })
+    }).then(() => {
+      return browser.windows.getCurrent({ populate: true })
+    }).then((windowInfo) => {
+      return browser.tabs.remove(windowInfo.tabs.map((tab) => tab.id))
+    }).then(fn)
+  },
+
   query (data) {
     const code = `var s; (s = document.getElementById('${data.element}')) && s.textContent`
 
@@ -212,7 +293,7 @@ const automation = {
       return Promise.try(() => {
         return browser.tabs.executeScript(tab.id, { code })
       }).then((results) => {
-        if (!results || (results[0] !== data.string)) {
+        if (!results || (results[0] !== data.randomString)) {
           throw new Error('Executed script did not return result')
         }
       })

@@ -4,7 +4,7 @@ import $document from '../document'
 import $jquery from '../jquery'
 import { getTagName } from './elementHelpers'
 import { isWithinShadowRoot, getShadowElementFromPoint } from './shadow'
-import { normalizeWhitespaces, escapeQuotes, isSelector } from './utils'
+import { normalizeWhitespaces } from './utils'
 
 /**
  * Find Parents relative to an initial element
@@ -125,8 +125,14 @@ export const getFirstDeepestElement = ($el: JQuery, index = 0) => {
   const $current = $el.slice(index, index + 1)
   const $next = $el.slice(index + 1, index + 2)
 
-  if (!$next) {
+  if (!$next || $current.length === 0) {
     return $current
+  }
+
+  // https://github.com/cypress-io/cypress/issues/14861
+  // filter out the <script> and <style> tags
+  if ($current && ['SCRIPT', 'STYLE'].includes($current.prop('tagName'))) {
+    return getFirstDeepestElement($el, index + 1)
   }
 
   // does current contain next?
@@ -154,7 +160,7 @@ export const getFirstDeepestElement = ($el: JQuery, index = 0) => {
 /**
  * By XY Coordinate
  */
-export const elementFromPoint = (doc, x, y) => {
+export const elementFromPoint = (doc, x, y): HTMLElement => {
   // first try the native elementFromPoint method
   let elFromPoint = doc.elementFromPoint(x, y)
 
@@ -217,65 +223,91 @@ export const getElements = ($el) => {
   return els
 }
 
-// Remove <style> and <script> elements inside <body>. Even though the contains
-// selector avoids selecting them with :not(script,style), it will find the
-// text anyway and attribute it to the <body>
-// https://github.com/cypress-io/cypress/issues/14861
-const removeScriptAndStyleElements = (elem) => {
-  const $elem = $(elem)
+/*
+ * We add three custom expressions to jquery. These let us use custom
+ * logic around case sensitivity, and match strings or regular expressions.
+ * See https://github.com/jquery/sizzle/wiki/#-pseudo-selectors for
+ * documentation on adding Sizzle selectors.
+ *
+ * Our use of
+ *
+ *   $.expr[':']['cy-contains'] = $.expr.createPseudo()
+ *
+ * is equivelent to
+ *
+ *   Sizzle.selectors.pseudos['cy-contains'] = Sizzle.selectors.createPseudo()
+ *
+ * in the documentation linked above. $.expr[':'] is jquery's alias for
+ * Sizzle.selectors.psuedos.
+ *
+ * These custom expressions are used exclusively by cy.contains; see
+ * `getContainsSelector` below.
+ */
 
-  if (!isSelector($elem, 'body')) return elem
+// Example:
+// button:cy-contains("Login")
+$.expr[':']['cy-contains'] = $.expr.createPseudo((text) => {
+  text = JSON.parse(`"${ text }"`)
 
-  $elem.find('script,style').remove()
+  return function (elem) {
+    let testText = normalizeWhitespaces(elem)
 
-  return $elem[0]
+    return testText.includes(text)
+  }
+})
+
+// Example:
+// .login-button:cy-contains-insensitive("login")
+$.expr[':']['cy-contains-insensitive'] = $.expr.createPseudo((text) => {
+  text = JSON.parse(`"${ text }"`)
+
+  return function (elem) {
+    let testText = normalizeWhitespaces(elem)
+
+    testText = testText.toLowerCase()
+    text = text.toLowerCase()
+
+    return testText.includes(text)
+  }
+})
+
+function isSubmit (elem: Element): elem is HTMLInputElement {
+  return elem.tagName === 'INPUT' && (elem as HTMLInputElement).type === 'submit'
 }
+
+// Example:
+// #login>li:first:cy-contains-regex('/asdf 1/i')
+$.expr[':']['cy-contains-regex'] = $.expr.createPseudo((text) => {
+  const lastSlash = text.lastIndexOf('/')
+  const regex = new RegExp(text.slice(1, lastSlash), text.slice(lastSlash + 1))
+
+  // taken from jquery's normal contains method
+  return function (elem) {
+    if (isSubmit(elem)) {
+      return regex.test(elem.value)
+    }
+
+    const testText = normalizeWhitespaces(elem)
+
+    return regex.test(testText)
+  }
+})
 
 export const getContainsSelector = (text, filter = '', options: {
   matchCase?: boolean
 } = {}) => {
-  const $expr = $.expr[':']
+  if (_.isRegExp(text) && options.matchCase === false && !text.flags.includes('i')) {
+    text = new RegExp(text.source, text.flags + 'i') // eslint-disable-line prefer-template
+  }
 
-  const escapedText = escapeQuotes(text)
+  const escapedText = _.isString(text) ? JSON.stringify(text).slice(1, -1) : text.toString()
 
   // they may have written the filter as
   // comma separated dom els, so we want to search all
   // https://github.com/cypress-io/cypress/issues/2407
   const filters = filter.trim().split(',')
 
-  let cyContainsSelector
-
-  if (_.isRegExp(text)) {
-    if (options.matchCase === false && !text.flags.includes('i')) {
-      text = new RegExp(text.source, text.flags + 'i') // eslint-disable-line prefer-template
-    }
-
-    // taken from jquery's normal contains method
-    cyContainsSelector = function (elem) {
-      elem = removeScriptAndStyleElements(elem)
-      let testText = normalizeWhitespaces(elem)
-
-      return text.test(testText)
-    }
-  } else if (_.isString(text)) {
-    cyContainsSelector = function (elem) {
-      elem = removeScriptAndStyleElements(elem)
-      let testText = normalizeWhitespaces(elem)
-
-      if (!options.matchCase) {
-        testText = testText.toLowerCase()
-        text = text.toLowerCase()
-      }
-
-      return testText.includes(text)
-    }
-  } else {
-    cyContainsSelector = $expr.contains
-  }
-
-  // we set the `cy-contains` jquery selector which will only be used
-  // in the context of cy.contains(...) command and selector playground.
-  $expr['cy-contains'] = cyContainsSelector
+  let expr = _.isRegExp(text) ? 'cy-contains-regex' : (options.matchCase ? 'cy-contains' : 'cy-contains-insensitive')
 
   const selectors = _.map(filters, (filter) => {
     // https://github.com/cypress-io/cypress/issues/8626
@@ -284,8 +316,27 @@ export const getContainsSelector = (text, filter = '', options: {
     const textToFind = escapedText.includes(`\'`) ? `"${escapedText}"` : `'${escapedText}'`
 
     // use custom cy-contains selector that is registered above
-    return `${filter}:not(script,style):cy-contains(${textToFind}), ${filter}[type='submit'][value~=${textToFind}]`
+    return `${filter}:${expr}(${textToFind}), ${filter}[type='submit'][value~=${textToFind}]`
   })
 
   return selectors.join()
+}
+
+export const getInputFromLabel = ($el) => {
+  if (!$el.is('label')) {
+    return $([])
+  }
+
+  // If an element has a "for" attribute, then clicking on it won't
+  // focus / activate any contained inputs, even if the "for" target doesn't
+  // exist.
+  if ($el.attr('for')) {
+    // The parent().last() is the current document, which is where we want to
+    // search from.
+    return $(`#${$el.attr('for')}`, $el.parents().last())
+  }
+
+  // Alternately, if a label contains inputs, clicking it focuses / activates
+  // the first one.
+  return $('input', $el).first()
 }

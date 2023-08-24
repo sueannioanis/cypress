@@ -4,7 +4,7 @@ The server is the heart of the Cypress application. All of this code represents 
 
 - Proxying every byte coming in and out of the browser
 - Performing and normalizing automation tasks for each browser
-- Coordinating and synchronizing state with the [desktop-gui](../desktop-gui) and [driver](../driver) packages
+- Coordinating and synchronizing state with the [launchpad](../launchpad) and [driver](../driver) packages
 - Performing node specific tasks on behalf of the [driver](../driver)
 - Instantiating and orchestrating nearly every other layer and package
 - Spinning up various static file and http servers
@@ -48,7 +48,7 @@ yarn test-watch /test/path/to/spec.js
 
 ### Running individual unit tests
 
-```bashtest-kitchensink
+```bash
 yarn test <path/to/test>
 yarn test test/unit/api_spec.js
 ## or
@@ -68,7 +68,7 @@ yarn test-integration cli_spec ## shorthand, uses globbing to find spec
 
 > With the addition of Component Testing, `e2e` tests have been renamed to `system-tests` and moved to the [`system-tests`](../../system-tests) directory.
 
-### Updating snaphots
+### Updating snapshots
 
 Prepend `SNAPSHOT_UPDATE=1` to any test command. See [`snap-shot-it` instructions](https://github.com/bahmutov/snap-shot-it#advanced-use) for more info.
 
@@ -76,3 +76,9 @@ Prepend `SNAPSHOT_UPDATE=1` to any test command. See [`snap-shot-it` instruction
 SNAPSHOT_UPDATE=1 yarn test test/unit/api_spec.js
 SNAPSHOT_UPDATE=1 yarn test test/integration/cli_spec.js
 ```
+
+### V8 Snapshots
+
+In order to improve start up time, Cypress uses [electron mksnapshot](https://github.com/electron/mksnapshot) for generating [v8 snapshots](https://v8.dev/blog/custom-startup-snapshots) for both development and production.
+
+Cypress code is automatically set up to run using snapshots. If you want to run Cypress in development without the v8 snapshot (for debugging purposes or to see if there's a problem with the snapshot or the code itself) you can set the environment variable `DISABLE_SNAPSHOT_REQUIRE` to 1 or true.

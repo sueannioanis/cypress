@@ -1,0 +1,29 @@
+name: "Semantic Pull Request"
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+jobs:
+  main:
+    name: Semantic Pull Request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      - run: npm install
+        working-directory: scripts/github-actions/semantic-pull-request/
+      - name: Lint PR Title and Cypress Changelog Entry
+        if: github.event_name == 'pull_request_target'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const verifyPullRequest = require('./scripts/github-actions/semantic-pull-request')
+
+            await verifyPullRequest({ context, core, github })

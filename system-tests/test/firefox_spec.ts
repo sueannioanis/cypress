@@ -17,7 +17,7 @@ describe('e2e firefox', function () {
   // @see https://github.com/cypress-io/cypress/issues/6187
   systemTests.it.skip('can run a lot of tests', {
     outputPath,
-    project: Fixtures.projectPath('firefox-memory'),
+    project: 'firefox-memory',
     spec: 'spec.js',
     browser: 'firefox',
     expectedExitCode: 0,
@@ -25,7 +25,6 @@ describe('e2e firefox', function () {
     config: {
       video: false,
     },
-    exit: false,
     onRun: (exec) => {
       return exec()
       .then(() => {
@@ -54,8 +53,8 @@ describe('e2e firefox', function () {
 
   systemTests.it('launches maximized by default', {
     browser: 'firefox',
-    project: Fixtures.projectPath('screen-size'),
-    spec: 'maximized.spec.js',
+    project: 'screen-size',
+    spec: 'maximized.cy.js',
     onRun: async (exec) => {
       const { stderr } = await exec({
         processEnv: {
@@ -73,7 +72,7 @@ describe('e2e firefox', function () {
   // https://github.com/cypress-io/cypress/issues/6392
   systemTests.it.skip('can run multiple specs', {
     browser: 'firefox',
-    project: Fixtures.projectPath('e2e'),
-    spec: 'simple_spec.js,simple_passing_spec.js',
+    project: 'e2e',
+    spec: 'simple.cy.js,simple_passing.cy.js',
   })
 })

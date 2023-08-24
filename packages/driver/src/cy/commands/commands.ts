@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import _ from 'lodash'
 
 import { $Chainer } from '../../cypress/chainer'
@@ -18,18 +16,19 @@ const command = function (ctx, name, ...args) {
 }
 
 export default function (Commands, Cypress, cy) {
-  Commands.addChainer({
-    // userInvocationStack has to be passed in here, but can be ignored
-    command (chainer, userInvocationStack, args) {
-      return command(chainer, ...args)
-    },
+  $Chainer.add('command', function (chainer, userInvocationStack, args) {
+    // `...args` below is the shorthand of `args[0], ...args.slice(1)`
+    // TypeScript doesn't allow this.
+    // @ts-ignore
+    return command(chainer, ...args)
   })
 
   Commands.addAllSync({
     command (...args) {
       args.unshift(cy)
 
-      return command.apply(window, args)
+      // cast to `any` to ignore ts error.
+      return command.apply(window, args as any)
     },
   })
 }

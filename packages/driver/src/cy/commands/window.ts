@@ -2,6 +2,7 @@ import _ from 'lodash'
 import Promise from 'bluebird'
 
 import $errUtils from '../../cypress/error_utils'
+import type { Log } from '../../cypress/log'
 
 const viewports = {
   'macbook-16': '1536x960',
@@ -35,11 +36,21 @@ type CurrentViewport = Pick<Cypress.Config, 'viewportWidth' | 'viewportHeight'>
 // refresh would cause viewport to hang
 let currentViewport: CurrentViewport | null = null
 
+interface InternalViewportOptions extends Partial<Cypress.Loggable> {
+  _log?: Log
+}
+
 export default (Commands, Cypress, cy, state) => {
   const defaultViewport: CurrentViewport = _.pick(Cypress.config() as Cypress.Config, 'viewportWidth', 'viewportHeight')
 
   // currentViewport could already be set due to previous runs
   currentViewport = currentViewport || defaultViewport
+
+  // sync the global viewport state when the viewport has changed in the primary or secondary
+  Cypress.primaryOriginCommunicator.on('sync:viewport', (viewport) => {
+    currentViewport = viewport
+    state(viewport)
+  })
 
   Cypress.on('test:before:run:async', () => {
     // if we have viewportDefaults it means
@@ -77,126 +88,56 @@ export default (Commands, Cypress, cy, state) => {
     })
   }
 
+  Commands.addQuery('title', function title (options: Partial<Cypress.Loggable & Cypress.Timeoutable> = {}) {
+    this.set('timeout', options.timeout)
+    if (options.log !== false) {
+      Cypress.log({ timeout: options.timeout })
+    }
+
+    return () => (state('document')?.title || '')
+  })
+
+  Commands.addQuery('window', function windowFn (options: Partial<Cypress.Loggable & Cypress.Timeoutable> = {}) {
+    this.set('timeout', options.timeout)
+    if (options.log !== false) {
+      Cypress.log({ timeout: options.timeout })
+    }
+
+    return () => {
+      const win = state('window')
+
+      if (!win) {
+        $errUtils.throwErrByPath('window.iframe_undefined')
+      }
+
+      return win
+    }
+  })
+
+  Commands.addQuery('document', function documentFn (options: Partial<Cypress.Loggable & Cypress.Timeoutable> = {}) {
+    this.set('timeout', options.timeout)
+    if (options.log !== false) {
+      Cypress.log({ timeout: options.timeout })
+    }
+
+    return () => {
+      const win = state('window')
+
+      if (!win?.document) {
+        $errUtils.throwErrByPath('window.iframe_doc_undefined')
+      }
+
+      return win.document
+    }
+  })
+
   Commands.addAll({
-    // TODO: any -> Partial<Cypress.Loggable & Cypress.Timeoutable>
-    title (options: any = {}) {
-      const userOptions = options
-
-      options = _.defaults({}, userOptions, { log: true })
-
-      if (options.log) {
-        options._log = Cypress.log({ timeout: options.timeout })
-      }
-
-      const resolveTitle = () => {
-        const doc = state('document')
-
-        const title = (doc && doc.title) || ''
-
-        return cy.verifyUpcomingAssertions(title, options, {
-          onRetry: resolveTitle,
-        })
-      }
-
-      return resolveTitle()
-    },
-
-    // TODO: any -> Partial<Cypress.Loggable & Cypress.Timeoutable>
-    window (options: any = {}) {
-      const userOptions = options
-
-      options = _.defaults({}, userOptions, { log: true })
-
-      if (options.log) {
-        options._log = Cypress.log({ timeout: options.timeout })
-      }
-
-      const getWindow = () => {
-        const window = state('window')
-
-        if (!window) {
-          $errUtils.throwErrByPath('window.iframe_undefined', { onFail: options._log })
-        }
-
-        return window
-      }
-
-      // wrap retrying into its own
-      // separate function
-      const retryWindow = () => {
-        return Promise
-        .try(getWindow)
-        .catch((err) => {
-          options.error = err
-
-          return cy.retry(retryWindow, options)
-        })
-      }
-
-      const verifyAssertions = () => {
-        return Promise.try(retryWindow).then((win) => {
-          return cy.verifyUpcomingAssertions(win, options, {
-            onRetry: verifyAssertions,
-          })
-        })
-      }
-
-      return verifyAssertions()
-    },
-
-    // TODO: any -> Partial<Cypress.Loggable & Cypress.Timeoutable>
-    document (options: any = {}) {
-      const userOptions = options
-
-      options = _.defaults({}, userOptions, { log: true })
-
-      if (options.log) {
-        options._log = Cypress.log({ timeout: options.timeout })
-      }
-
-      const getDocument = () => {
-        const win = state('window')
-
-        // TODO: add failing test around logging twice
-        if (!win?.document) {
-          $errUtils.throwErrByPath('window.iframe_doc_undefined')
-        }
-
-        return win.document
-      }
-
-      // wrap retrying into its own
-      // separate function
-      const retryDocument = () => {
-        return Promise
-        .try(getDocument)
-        .catch((err) => {
-          options.error = err
-
-          return cy.retry(retryDocument, options)
-        })
-      }
-
-      const verifyAssertions = () => {
-        return Promise.try(retryDocument).then((doc) => {
-          return cy.verifyUpcomingAssertions(doc, options, {
-            onRetry: verifyAssertions,
-          })
-        })
-      }
-
-      return verifyAssertions()
-    },
-
-    // TODO: any -> Partial<Cypress.Loggable>
-    viewport (presetOrWidth, heightOrOrientation, options: any = {}) {
-      const userOptions = options
-
+    viewport (presetOrWidth, heightOrOrientation, userOptions: Partial<Cypress.Loggable> = {}) {
       if (_.isObject(heightOrOrientation)) {
-        options = heightOrOrientation
+        userOptions = heightOrOrientation
       }
 
-      options = _.defaults({}, userOptions, { log: true })
+      const options: InternalViewportOptions = _.defaults({}, userOptions, { log: true })
 
       let height
       let width
@@ -208,10 +149,6 @@ export default (Commands, Cypress, cy, state) => {
         const isPreset = typeof presetOrWidth === 'string'
 
         options._log = Cypress.log({
-          // TODO: timeout below should be removed
-          // because cy.viewport option doesn't support `timeout`
-          // @see https://docs.cypress.io/api/commands/viewport#Arguments
-          timeout: options.timeout,
           consoleProps () {
             const obj: Record<string, string | number> = {}
 
@@ -246,16 +183,18 @@ export default (Commands, Cypress, cy, state) => {
       if (_.isString(presetOrWidth) && _.isBlank(presetOrWidth)) {
         $errUtils.throwErrByPath('viewport.empty_string', { onFail: options._log })
       } else if (_.isString(presetOrWidth)) {
-        const getPresetDimensions = (preset) => {
+        const getPresetDimensions = (preset): number[] => {
           try {
             return _.map(viewports[presetOrWidth].split('x'), Number)
           } catch (e) {
             const presets = _.keys(viewports).join(', ')
 
-            return $errUtils.throwErrByPath('viewport.missing_preset', {
+            $errUtils.throwErrByPath('viewport.missing_preset', {
               onFail: options._log,
               args: { preset, presets },
             })
+
+            return [] // dummy code to silence TS
           }
         }
 

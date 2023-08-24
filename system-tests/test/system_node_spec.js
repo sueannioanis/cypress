@@ -1,8 +1,5 @@
 const systemTests = require('../lib/system-tests').default
 const execa = require('execa')
-const Fixtures = require('../lib/fixtures')
-
-const systemNode = Fixtures.projectPath('system-node')
 
 let expectedNodeVersion
 let expectedNodePath
@@ -18,10 +15,11 @@ describe('e2e system node', () => {
 
   it('uses system node when launching plugins file', async function () {
     const { stderr } = await systemTests.exec(this, {
-      project: systemNode,
+      project: 'system-node',
       userNodePath: expectedNodePath,
       userNodeVersion: expectedNodeVersion,
       config: {
+        videoCompression: false,
         nodeVersion: 'system',
         env: {
           expectedNodeVersion,
@@ -40,8 +38,9 @@ describe('e2e system node', () => {
 
   it('uses bundled node when launching plugins file', async function () {
     const { stderr } = await systemTests.exec(this, {
-      project: systemNode,
+      project: 'system-node',
       config: {
+        videoCompression: false,
         nodeVersion: 'bundled',
         env: {
           expectedNodeVersion,
@@ -59,10 +58,11 @@ describe('e2e system node', () => {
 
   it('uses default node when launching plugins file', async function () {
     const { stderr } = await systemTests.exec(this, {
-      project: systemNode,
+      project: 'system-node',
       userNodePath: expectedNodePath,
       userNodeVersion: expectedNodeVersion,
       config: {
+        videoCompression: false,
         env: {
           expectedNodeVersion,
           expectedNodePath,

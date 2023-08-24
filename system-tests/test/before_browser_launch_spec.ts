@@ -1,5 +1,5 @@
-import systemTests from '../lib/system-tests'
 import Fixtures from '../lib/fixtures'
+import systemTests from '../lib/system-tests'
 import browserUtils from '@packages/server/lib/browsers/utils'
 
 const browser = {
@@ -20,19 +20,24 @@ describe('e2e before:browser:launch', () => {
         PATH_TO_CHROME_PROFILE,
       },
     },
-    project: Fixtures.projectPath('chrome-browser-preferences'),
+    project: 'chrome-browser-preferences',
     snapshot: true,
-    spec: 'spec.js',
+    spec: 'spec.cy.js',
   })
 
   systemTests.it('can add extensions', {
-    spec: 'spec.js',
+    browser: '!webkit', // TODO(webkit): fix+unskip, or skip and add a test that this fails with WebKit
+    spec: 'spec.cy.js',
     config: {
       video: false,
     },
     headed: true,
-    project: Fixtures.projectPath('browser-extensions'),
+    project: 'browser-extensions',
     sanitizeScreenshotDimensions: true,
     snapshot: true,
+    onRun: async (exec) => {
+      await Fixtures.scaffoldProject('plugin-extension')
+      await exec()
+    },
   })
 })

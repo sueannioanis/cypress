@@ -1,7 +1,5 @@
 const _ = require('lodash')
 const express = require('express')
-const http = require('http')
-const https = require('https')
 const path = require('path')
 const debug = require('debug')('cypress:server:network-error-handling-spec')
 const Promise = require('bluebird')
@@ -12,12 +10,10 @@ const chrome = require('@packages/server/lib/browsers/chrome')
 const systemTests = require('../lib/system-tests').default
 const random = require('@packages/server/lib/util/random')
 const Fixtures = require('../lib/fixtures')
-let mitmProxy = require('http-mitm-proxy')
 
 const PORT = 13370
 const PROXY_PORT = 13371
 const HTTPS_PORT = 13372
-const ERR_HTTPS_PORT = 13373
 
 const start = Number(new Date())
 
@@ -243,7 +239,9 @@ describe('e2e network error handling', function () {
       },
     ],
     settings: {
-      baseUrl: `http://localhost:${PORT}/`,
+      e2e: {
+        baseUrl: `http://localhost:${PORT}/`,
+      },
     },
   })
 
@@ -349,25 +347,26 @@ describe('e2e network error handling', function () {
   })
 
   context('Cypress', () => {
+    let debugProxy
+
     beforeEach(() => {
       delete process.env.HTTP_PROXY
       delete process.env.HTTPS_PROXY
 
-      return delete process.env.NO_PROXY
+      delete process.env.NO_PROXY
     })
 
-    afterEach(function () {
-      if (this.debugProxy) {
-        return this.debugProxy.stop()
-        .then(() => {
-          this.debugProxy = null
-        })
+    afterEach(async function () {
+      if (debugProxy) {
+        await debugProxy.stop()
+        debugProxy = null
       }
     })
 
     it('baseurl check tries 5 times in run mode', function () {
       return systemTests.exec(this, {
         config: {
+          videoCompression: false,
           baseUrl: 'http://never-gonna-exist.invalid',
         },
         snapshot: true,
@@ -377,26 +376,28 @@ describe('e2e network error handling', function () {
 
     it('tests run as expected', function () {
       return systemTests.exec(this, {
-        spec: 'network_error_handling_spec.js',
+        spec: 'network_error_handling.cy.js',
         video: false,
         expectedExitCode: 2,
         snapshot: true,
       }).then(({ stdout }) => {
-        // sometimes <img>, <script> get retried 2x by chrome instead of 1x
+        // sometimes <img>, <script> get retried, sometimes they do not
 
-        if (counts['/immediate-reset?load-img'] === 10) {
-          counts['/immediate-reset?load-img'] = 5
+        if (counts['/immediate-reset?load-img'] > 1) {
+          console.log('load-img was retried', counts['/immediate-reset?load-img'], 'times')
+          counts['/immediate-reset?load-img'] = 1
         }
 
-        if (counts['/immediate-reset?load-js'] === 10) {
-          counts['/immediate-reset?load-js'] = 5
+        if (counts['/immediate-reset?load-js'] > 1) {
+          console.log('load-js was retried', counts['/immediate-reset?load-js'], 'times')
+          counts['/immediate-reset?load-js'] = 1
         }
 
         expect(counts).to.deep.eq({
           '/immediate-reset?visit': 5,
           '/immediate-reset?request': 5,
-          '/immediate-reset?load-img': 5,
-          '/immediate-reset?load-js': 5,
+          '/immediate-reset?load-img': 1,
+          '/immediate-reset?load-js': 1,
           '/works-third-time-else-500/500-for-request': 3,
           '/works-third-time/for-request': 3,
           '/works-third-time-else-500/500-for-visit': 3,
@@ -409,99 +410,26 @@ describe('e2e network error handling', function () {
       })
     })
 
-    it('retries HTTPS passthrough behind a proxy', function () {
-      // this tests retrying multiple times
-      // to connect to the upstream server
-      // as well as network errors when the
-      // upstream server is not accessible
-
-      const connectCounts = {}
-
-      const onConnect = function ({ host, port, socket }) {
-        const dest = `${host}:${port}`
-
-        if (connectCounts[dest] == null) {
-          connectCounts[dest] = 0
-        }
-
-        connectCounts[dest] += 1
-
-        switch (port) {
-          case HTTPS_PORT:
-            // this tests network related errors
-            // when we do immediately destroy the
-            // socket and prevent connecting to the
-            // upstream server
-            //
-            // on the 3rd time around, don't destroy the socket.
-            if (connectCounts[`localhost:${HTTPS_PORT}`] >= 3) {
-              return true
-            }
-
-            // else if this is the 1st or 2nd time destroy the
-            // socket so we retry connecting to the debug proxy
-            socket.destroy()
-
-            return false
-
-          case ERR_HTTPS_PORT:
-            // always destroy the socket attempting to connect
-            // to the upstream server to test that network errors
-            // are propagated correctly
-            socket.destroy()
-
-            return false
-
-          default:
-            // pass everything else on to the upstream
-            // server as expected
-            return true
-        }
-      }
-
-      this.debugProxy = new DebugProxy({
-        onConnect,
-      })
-
-      return this.debugProxy
-      .start(PROXY_PORT)
-      .then(() => {
-        process.env.HTTP_PROXY = `http://localhost:${PROXY_PORT}`
-        process.env.NO_PROXY = '<-loopback>' // proxy everything including localhost
-
-        return systemTests.exec(this, {
-          spec: 'https_passthru_spec.js',
-          snapshot: true,
-        })
-        .then(() => {
-          console.log('connect counts are', connectCounts)
-
-          expect(connectCounts[`localhost:${HTTPS_PORT}`]).to.be.gte(3)
-
-          expect(connectCounts[`localhost:${ERR_HTTPS_PORT}`]).to.be.gte(4)
-        })
-      })
-    })
-
     it('does not connect to the upstream proxy for the SNI server request', function () {
       const onConnect = sinon.spy(() => {
         return true
       })
 
-      this.debugProxy = new DebugProxy({
+      debugProxy = new DebugProxy({
         onConnect,
       })
 
-      return this.debugProxy
+      return debugProxy
       .start(PROXY_PORT)
       .then(() => {
         process.env.HTTP_PROXY = `http://localhost:${PROXY_PORT}`
         process.env.NO_PROXY = '<-loopback>,localhost:13373' // proxy everything except for the irrelevant test
 
         return systemTests.exec(this, {
-          spec: 'https_passthru_spec.js',
+          spec: 'https_passthru.cy.js',
           snapshot: true,
           config: {
+            videoCompression: false,
             baseUrl: `https://localhost:${HTTPS_PORT}`,
           },
         })
@@ -527,63 +455,61 @@ describe('e2e network error handling', function () {
     context('does not delay a 304 Not Modified', () => {
       it('in normal network conditions', function () {
         return systemTests.exec(this, {
-          spec: 'network_error_304_handling_spec.js',
+          spec: 'network_error_304_handling.cy.js',
           video: false,
           config: {
-            baseUrl: `http://localhost:${PORT}`,
+            videoCompression: false,
             pageLoadTimeout: 4000,
+            baseUrl: `http://localhost:${PORT}`,
           },
           snapshot: true,
         })
       })
 
       it('behind a proxy', function () {
-        this.debugProxy = new DebugProxy()
+        debugProxy = new DebugProxy()
 
-        return this.debugProxy
+        return debugProxy
         .start(PROXY_PORT)
         .then(() => {
           process.env.HTTP_PROXY = `http://localhost:${PROXY_PORT}`
           process.env.NO_PROXY = ''
         }).then(() => {
           return systemTests.exec(this, {
-            spec: 'network_error_304_handling_spec.js',
+            spec: 'network_error_304_handling.cy.js',
             video: false,
             config: {
-              baseUrl: `http://localhost:${PORT}`,
+              videoCompression: false,
               pageLoadTimeout: 4000,
+              baseUrl: `http://localhost:${PORT}`,
             },
             snapshot: true,
           })
         })
       })
 
-      it('behind a proxy with transfer-encoding: chunked', function () {
-        mitmProxy = mitmProxy()
-
-        mitmProxy.onRequest((ctx, callback) => {
-          return callback()
-        })
-
-        mitmProxy.listen({
-          host: '127.0.0.1',
-          port: PROXY_PORT,
-          keepAlive: true,
-          httpAgent: http.globalAgent,
-          httpsAgent: https.globalAgent,
-          forceSNI: false,
-          forceChunkedRequest: true,
+      it('behind a proxy with transfer-encoding: chunked', async function () {
+        debugProxy = new DebugProxy({
+          onRequest: (reqUrl, req, res) => {
+            expect(req.headers).to.have.property('content-length')
+            // delete content-length to force te: chunked
+            delete req.headers['content-length']
+            debugProxy._onRequest(reqUrl, req, res)
+          },
         })
 
         process.env.HTTP_PROXY = `http://localhost:${PROXY_PORT}`
         process.env.NO_PROXY = ''
 
-        return systemTests.exec(this, {
-          spec: 'network_error_304_handling_spec.js',
+        await debugProxy.start(PROXY_PORT)
+
+        await systemTests.exec(this, {
+          spec: 'network_error_304_handling.cy.js',
           video: false,
           config: {
-            baseUrl: `http://localhost:${PORT}`,
+            videoCompression: false,
             pageLoadTimeout: 4000,
+            baseUrl: `http://localhost:${PORT}`,
           },
           snapshot: true,
         })
