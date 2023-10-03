@@ -6851,22 +6851,27 @@
     "@types/through" "*"
     rxjs "^6.4.0"
 
-"@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0", "@types/istanbul-lib-coverage@^2.0.1":
+"@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0":
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/@types/istanbul-lib-coverage/-/istanbul-lib-coverage-2.0.4.tgz#8467d4b3c087805d63580480890791277ce35c44"
+  integrity sha512-z/QT1XN4K4KYuslS23k62yDIDLwLFkzxOuMplDtObz0+y7VqJCaO2o+SPwHCvLFZh7xazvvoor2tA/hPz9ee7g==
+
+"@types/istanbul-lib-coverage@^2.0.1":
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/@types/istanbul-lib-coverage/-/istanbul-lib-coverage-2.0.3.tgz#4ba8ddb720221f432e443bd5f9117fd22cfd4762"
   integrity sha512-sz7iLqvVUg1gIedBOvlkxPlc8/uVzyS5OwGz1cKjXzkl3FpL3al0crU8YGU1WoHkxn0Wxbw5tyi6hvzJKNzFsw==
 
 "@types/istanbul-lib-report@*":
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/@types/istanbul-lib-report/-/istanbul-lib-report-3.0.0.tgz#c14c24f18ea8190c118ee7562b7ff99a36552686"
-  integrity sha512-plGgXAPfVKFoYfa9NpYDAkseG+g6Jr294RqeqcqDixSbU34MZVJRi/P+7Y8GDpzkEwLaGZZOpKIEmeVZNtKsrg==
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/@types/istanbul-lib-report/-/istanbul-lib-report-3.0.1.tgz#412e0725ef41cde73bfa03e0e833eaff41e0fd63"
+  integrity sha512-gPQuzaPR5h/djlAv2apEG1HVOyj1IUs7GpfMZixU0/0KXT3pm64ylHuMUI1/Akh+sq/iikxg6Z2j+fcMDXaaTQ==
   dependencies:
     "@types/istanbul-lib-coverage" "*"
 
 "@types/istanbul-reports@^3.0.0":
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/@types/istanbul-reports/-/istanbul-reports-3.0.1.tgz#9153fe98bba2bd565a63add9436d6f0d7f8468ff"
-  integrity sha512-c3mAZEuK0lvBp8tmuL74XRKn1+y2dcwOUpH7x4WrF6gk1GIgiluDRgMYQtw2OFcBvAJWlt6ASU3tSqxp0Uu0Aw==
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/@types/istanbul-reports/-/istanbul-reports-3.0.2.tgz#edc8e421991a3b4df875036d381fc0a5a982f549"
+  integrity sha512-kv43F9eb3Lhj+lr/Hn6OcLCs/sSM8bt+fIaP11rCYngfV6NVjzWXJ17owQtDQTL9tQ8WSLUrGsSJ6rJz0F1w1A==
   dependencies:
     "@types/istanbul-lib-report" "*"
 
@@ -7534,9 +7539,9 @@
   integrity sha512-37RSHht+gzzgYeobbG+KWryeAW8J33Nhr69cjTqSYymXVZEN9NbRYWoYlRtDhHKPVT1FyNKwaTPC1NynKZpzRA==
 
 "@types/yargs@^15.0.0":
-  version "15.0.14"
-  resolved "https://registry.yarnpkg.com/@types/yargs/-/yargs-15.0.14.tgz#26d821ddb89e70492160b66d10a0eb6df8f6fb06"
-  integrity sha512-yEJzHoxf6SyQGhBhIYGXQDSCkJjB6HohDShto7m8vaKg9Yp0Yn8+71J9eakh2bnPg6BfsH9PRMhiRTZnd4eXGQ==
+  version "15.0.16"
+  resolved "https://registry.yarnpkg.com/@types/yargs/-/yargs-15.0.16.tgz#258009dc52907e8f03041eb64ffdac297ba4b208"
+  integrity sha512-2FeD5qezW3FvLpZ0JpfuaEWepgNLl9b2gQYiz/ce0NhoB1W/D+VZu98phITXkADYerfr/jb7JcDcVhITsc9bwg==
   dependencies:
     "@types/yargs-parser" "*"
 
@@ -12845,9 +12850,9 @@ detect-libc@^1.0.3:
   integrity sha1-+hN8S9aY7fVc1c0CrFWfkaTEups=
 
 detect-libc@^2.0.0:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-2.0.1.tgz#e1897aa88fa6ad197862937fbc0441ef352ee0cd"
-  integrity sha512-463v3ZeIrcWtdgIg6vI6XUncguvr2TnGl4SzDXinkt9mSLpBJKXT3mW6xT3VQdDN11+WVs29pgvivTc4Lp8v+w==
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-2.0.2.tgz#8ccf2ba9315350e1241b88d0ac3b0e1fbd99605d"
+  integrity sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw==
 
 detect-newline@3.1.0:
   version "3.1.0"
@@ -21887,9 +21892,9 @@ node-abi@^2.7.0:
     semver "^5.4.1"
 
 node-abi@^3.3.0:
-  version "3.30.0"
-  resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.30.0.tgz#d84687ad5d24ca81cdfa912a36f2c5c19b137359"
-  integrity sha512-qWO5l3SCqbwQavymOmtTVuCWZE23++S+rxyoHjXqUmPyzRcaoI4lA2gO55/drddGnedAyjA7sk76SfQ5lfUMnw==
+  version "3.47.0"
+  resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.47.0.tgz#6cbfa2916805ae25c2b7156ca640131632eb05e8"
+  integrity sha512-2s6B2CWZM//kPgwnuI0KrYwNjfdByE25zvAaEpq9IH4zcNsarH8Ihu/UuX6XMPEogDAxkuUFeZn60pXNHAqn3A==
   dependencies:
     semver "^7.3.5"
 
@@ -24044,9 +24049,9 @@ postcss@^7.0.11, postcss@^7.0.18, postcss@^7.0.26, postcss@^7.0.32:
     source-map "^0.6.1"
 
 postcss@^8.1.10, postcss@^8.2.14, postcss@^8.2.7, postcss@^8.4.21, postcss@^8.4.22, postcss@^8.4.23, postcss@^8.4.27:
-  version "8.4.27"
-  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.4.27.tgz#234d7e4b72e34ba5a92c29636734349e0d9c3057"
-  integrity sha512-gY/ACJtJPSmUFPDCHtX78+01fHa64FaU4zaaWfuh1MhGJISufJAH4cun6k/8fwsHYeK4UQmENQK+tRLCFJE8JQ==
+  version "8.4.31"
+  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.4.31.tgz#92b451050a9f914da6755af352bdc0192508656d"
+  integrity sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ==
   dependencies:
     nanoid "^3.3.6"
     picocolors "^1.0.0"
